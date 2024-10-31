@@ -27,6 +27,10 @@ public:      // methods
   // Take a screen capture and add it to the "to do" list.
   void captureScreen();
 
+  // register/unregister our global hotkeys.
+  void registerHotkeys();
+  void unregisterHotkeys();
+
   // Handle `WM_PAINT`.
   void onPaint();
 

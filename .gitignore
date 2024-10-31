@@ -1,0 +1,7 @@
+*.bak
+*.d
+*.exe
+*.ii
+*.o
+gamepad-viewer.json
+rel

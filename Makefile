@@ -36,6 +36,7 @@ OBJS :=
 OBJS += base-window.o
 OBJS += game-todo-list.o
 OBJS += resources.o
+OBJS += screenshot.o
 OBJS += winapi-util.o
 
 

@@ -197,17 +197,33 @@ public:      // methods
   HDCReleaser hdcVar##_releaser(hwnd, hdcVar);
 
 
+// Create and destroy an HDC compatible with another.
+class CompatibleHDC {
+public:      // data
+  // The new HDC.
+  HDC m_hdc;
+
+public:      // methods
+  CompatibleHDC(HDC other);
+  ~CompatibleHDC();
+};
+
+
 // Delete a GDI object when going out of scope.
 class GDIObjectDeleter {
   NO_OBJECT_COPIES(GDIObjectDeleter);
 
 public:      // data
-  // The object to be deleted.
+  // The object to be deleted.  This can be set to null to do nothing in
+  // the dtor.
   HGDIOBJ m_obj;
 
 public:      // methods
   GDIObjectDeleter(HGDIOBJ obj);
   ~GDIObjectDeleter();
+
+  // Return the handle and nullify `m_obj`.
+  HGDIOBJ release();
 };
 
 

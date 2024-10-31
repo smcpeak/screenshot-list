@@ -183,6 +183,22 @@ HDCReleaser::~HDCReleaser()
 }
 
 
+// --------------------------- CompatibleHDC ---------------------------
+CompatibleHDC::CompatibleHDC(HDC other)
+  : m_hdc(nullptr)
+{
+  CALL_HANDLE_WINAPI(m_hdc, CreateCompatibleDC, other);
+}
+
+
+CompatibleHDC::~CompatibleHDC()
+{
+  if (m_hdc) {
+    DeleteDC(m_hdc);
+  }
+}
+
+
 // ------------------------- GDIObjectDeleter --------------------------
 GDIObjectDeleter::GDIObjectDeleter(HGDIOBJ obj)
   : m_obj(obj)
@@ -191,7 +207,17 @@ GDIObjectDeleter::GDIObjectDeleter(HGDIOBJ obj)
 
 GDIObjectDeleter::~GDIObjectDeleter()
 {
-  CALL_BOOL_WINAPI(DeleteObject, m_obj);
+  if (m_obj) {
+    CALL_BOOL_WINAPI(DeleteObject, m_obj);
+  }
+}
+
+
+HGDIOBJ GDIObjectDeleter::release()
+{
+  HGDIOBJ ret = m_obj;
+  m_obj = nullptr;
+  return ret;
 }
 
 

@@ -11,6 +11,8 @@
 
 #include <cassert>                     // assert
 #include <cstdlib>                     // std::{atoi, getenv}
+#include <cstring>                     // std::wstrlen
+#include <cwchar>                      // std::wcslen
 #include <iostream>                    // std::{wcerr, flush}
 #include <sstream>                     // std::wostringstream
 
@@ -48,62 +50,18 @@ static int const HOTKEY_ID_UP = 2;
 
 
 GTLMainWindow::GTLMainWindow()
+  : m_screenshot()
 {}
 
 
-// Based on
-// https://learn.microsoft.com/en-us/windows/win32/gdi/capturing-an-image.
+GTLMainWindow::~GTLMainWindow()
+{}
+
+
 void GTLMainWindow::captureScreen()
 {
-  GET_AND_RELEASE_HDC(hdcScreen, NULL);
-  GET_AND_RELEASE_HDC(hdcWindow, m_hwnd);
-
-  // This cannot use `GET_AND_RELEASE_HDC` because this DC must be
-  // destroyed using `DeleteObject`, not `ReleaseDC` (!).
-  HDC hdcMemDC;
-  CALL_HANDLE_WINAPI(hdcMemDC, CreateCompatibleDC, hdcWindow);
-  GDIObjectDeleter hdcMemDC_deleter(hdcMemDC);
-
-  // Region of our window to fill with the screenshot.
-  RECT rcClient;
-  CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
-
-  // Create a compatible bitmap from the Window DC.
-  HBITMAP hbmScreenshot;
-  CALL_HANDLE_WINAPI(hbmScreenshot, CreateCompatibleBitmap,
-    hdcWindow,
-    rcClient.right - rcClient.left,
-    rcClient.bottom - rcClient.top);
-  GDIObjectDeleter hbmScreenshot_deleter(hbmScreenshot);
-
-  // Select the compatible bitmap into the compatible memory DC.
-  SELECT_RESTORE_OBJECT(hdcMemDC, hbmScreenshot);
-
-  // Docs claim: "This is the best stretch mode."  This function does
-  // not have a sensible way to signal errors, so I do not check.
-  SetStretchBltMode(hdcMemDC, HALFTONE);
-
-  // Screenshot with result going to the Memory DC.
-  CALL_BOOL_WINAPI(StretchBlt,
-    hdcMemDC,                          // hdcDest
-    0, 0,                              // xDest, yDest
-    rcClient.right,                    // wDest
-    rcClient.bottom,                   // hDest
-    hdcScreen,                         // hdcSrc
-    0, 0,                              // xSrc, ySrc
-    GetSystemMetrics(SM_CXSCREEN),     // wSrc
-    GetSystemMetrics(SM_CYSCREEN),     // hSrc
-    SRCCOPY);                          // rop
-
-  // Draw that on the window too.
-  CALL_BOOL_WINAPI(BitBlt,
-    hdcWindow,                         // hdcDest
-    0, 0,                              // xDest, yDest
-    rcClient.right,                    // wDest
-    rcClient.bottom,                   // hDest
-    hdcMemDC,                          // hdcSrc
-    0, 0,                              // xSrc, ySrc
-    SRCCOPY);                          // rop
+  m_screenshot.reset(new Screenshot());
+  invalidateAllPixels();
 }
 
 
@@ -117,10 +75,43 @@ void GTLMainWindow::onPaint()
   {
     FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
 
-    HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
-    SELECT_RESTORE_OBJECT(hdc, hFont);
+    if (m_screenshot) {
+      CompatibleHDC memDC(hdc);
 
-    CALL_BOOL_WINAPI(TextOut, hdc, 10, 10, L"Sample text", 11);
+      // Select the screenshot into the memory DC so the bitmap will act
+      // as its data source.
+      SELECT_RESTORE_OBJECT(memDC.m_hdc, m_screenshot->m_bitmap);
+
+      // The MS docs claim this is the "best" stretch mode.
+      SetStretchBltMode(memDC.m_hdc, HALFTONE);
+
+      // Region of our window to fill with the screenshot.
+      RECT rcClient;
+      CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
+
+      // Copy the screenshot into our window with stretching.
+      //
+      // TODO: Preserve the aspect ratio!
+      //
+      CALL_BOOL_WINAPI(StretchBlt,
+        hdc,                               // hdcDest
+        0, 0,                              // xDest, yDest
+        rcClient.right,                    // wDest
+        rcClient.bottom,                   // hDest
+        memDC.m_hdc,                       // hdcSrc
+        0, 0,                              // xSrc, ySrc
+        m_screenshot->m_width,             // wSrc
+        m_screenshot->m_height,            // hSrc
+        SRCCOPY);                          // rop
+    }
+
+    else {
+      HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
+      SELECT_RESTORE_OBJECT(hdc, hFont);
+
+      wchar_t const *msg = L"No screenshot";
+      CALL_BOOL_WINAPI(TextOut, hdc, 10, 10, msg, std::wcslen(msg));
+    }
   }
 
   EndPaint(m_hwnd, &ps);
@@ -211,6 +202,13 @@ LRESULT CALLBACK GTLMainWindow::handleMessage(
         return 0;
       }
       break;
+
+    case WM_SIZE:
+      // The default behavior will only repaint newly-exposed areas, but
+      // I want the active screenshot to be stretched to fill the
+      // window, so I need all of it repainted.
+      invalidateAllPixels();
+      return 0;
   }
 
   return BaseWindow::handleMessage(uMsg, wParam, lParam);

@@ -67,6 +67,12 @@ void BaseWindow::createWindow(CreateWindowExWArgs const &origCW)
 }
 
 
+void BaseWindow::invalidateAllPixels()
+{
+  InvalidateRect(m_hwnd, nullptr /*lpRect*/, false /*bErase*/);
+}
+
+
 /*static*/ LRESULT CALLBACK BaseWindow::WindowProc(
   HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {

@@ -50,6 +50,9 @@ public:      // methods
   //
   void createWindow(CreateWindowExWArgs const &cw);
 
+  // Invalidate all client area pixels, forcing a repaint.
+  void invalidateAllPixels();
+
   // Window procedure used by all `BaseWindow` instances.  It delegates
   // to `handleMessage`.
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

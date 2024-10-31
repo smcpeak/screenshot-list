@@ -7,17 +7,22 @@
 #define GAME_TODO_LIST_H
 
 #include "base-window.h"               // BaseWindow
+#include "screenshot.h"                // Screenshot
 
 #include <windows.h>                   // Windows API
+
+#include <memory>                      // std::unique_ptr
 
 
 // Main window of the "to do" app.
 class GTLMainWindow : public BaseWindow {
 public:      // data
-  // (None yet.)
+  // A screenshot, if we have one.
+  std::unique_ptr<Screenshot> m_screenshot;
 
 public:      // methods
   GTLMainWindow();
+  ~GTLMainWindow();
 
   // Take a screen capture and add it to the "to do" list.
   void captureScreen();

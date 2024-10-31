@@ -170,4 +170,29 @@ SelectRestoreObject::~SelectRestoreObject()
 }
 
 
+// ---------------------------- HDCReleaser ----------------------------
+HDCReleaser::HDCReleaser(HWND hwnd, HDC hdc)
+  : m_hwnd(hwnd),
+    m_hdc(hdc)
+{}
+
+
+HDCReleaser::~HDCReleaser()
+{
+  CALL_BOOL_WINAPI(ReleaseDC, m_hwnd, m_hdc);
+}
+
+
+// ------------------------- GDIObjectDeleter --------------------------
+GDIObjectDeleter::GDIObjectDeleter(HGDIOBJ obj)
+  : m_obj(obj)
+{}
+
+
+GDIObjectDeleter::~GDIObjectDeleter()
+{
+  CALL_BOOL_WINAPI(DeleteObject, m_obj);
+}
+
+
 // EOF

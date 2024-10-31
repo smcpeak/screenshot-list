@@ -5,7 +5,7 @@
 
 #include "game-todo-list.h"            // this module
 
-#include "winapi-util.h"               // WIDE_STRINGIZE, SELECT_RESTORE_OBJECT
+#include "winapi-util.h"               // WIDE_STRINGIZE, SELECT_RESTORE_OBJECT, GET_AND_RELEASE_HDC
 
 #include <windows.h>                   // Windows API
 
@@ -51,6 +51,62 @@ GTLMainWindow::GTLMainWindow()
 {}
 
 
+// Based on
+// https://learn.microsoft.com/en-us/windows/win32/gdi/capturing-an-image.
+void GTLMainWindow::captureScreen()
+{
+  GET_AND_RELEASE_HDC(hdcScreen, NULL);
+  GET_AND_RELEASE_HDC(hdcWindow, m_hwnd);
+
+  // This cannot use `GET_AND_RELEASE_HDC` because this DC must be
+  // destroyed using `DeleteObject`, not `ReleaseDC` (!).
+  HDC hdcMemDC;
+  CALL_HANDLE_WINAPI(hdcMemDC, CreateCompatibleDC, hdcWindow);
+  GDIObjectDeleter hdcMemDC_deleter(hdcMemDC);
+
+  // Region of our window to fill with the screenshot.
+  RECT rcClient;
+  CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
+
+  // Create a compatible bitmap from the Window DC.
+  HBITMAP hbmScreenshot;
+  CALL_HANDLE_WINAPI(hbmScreenshot, CreateCompatibleBitmap,
+    hdcWindow,
+    rcClient.right - rcClient.left,
+    rcClient.bottom - rcClient.top);
+  GDIObjectDeleter hbmScreenshot_deleter(hbmScreenshot);
+
+  // Select the compatible bitmap into the compatible memory DC.
+  SELECT_RESTORE_OBJECT(hdcMemDC, hbmScreenshot);
+
+  // Docs claim: "This is the best stretch mode."  This function does
+  // not have a sensible way to signal errors, so I do not check.
+  SetStretchBltMode(hdcMemDC, HALFTONE);
+
+  // Screenshot with result going to the Memory DC.
+  CALL_BOOL_WINAPI(StretchBlt,
+    hdcMemDC,                          // hdcDest
+    0, 0,                              // xDest, yDest
+    rcClient.right,                    // wDest
+    rcClient.bottom,                   // hDest
+    hdcScreen,                         // hdcSrc
+    0, 0,                              // xSrc, ySrc
+    GetSystemMetrics(SM_CXSCREEN),     // wSrc
+    GetSystemMetrics(SM_CYSCREEN),     // hSrc
+    SRCCOPY);                          // rop
+
+  // Draw that on the window too.
+  CALL_BOOL_WINAPI(BitBlt,
+    hdcWindow,                         // hdcDest
+    0, 0,                              // xDest, yDest
+    rcClient.right,                    // wDest
+    rcClient.bottom,                   // hDest
+    hdcMemDC,                          // hdcSrc
+    0, 0,                              // xSrc, ySrc
+    SRCCOPY);                          // rop
+}
+
+
 void GTLMainWindow::onPaint()
 {
   PAINTSTRUCT ps;
@@ -68,6 +124,19 @@ void GTLMainWindow::onPaint()
   }
 
   EndPaint(m_hwnd, &ps);
+}
+
+
+void GTLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
+{
+  TRACE2(L"hotkey:"
+         " id=" << id <<
+         " fsModifiers=" << fsModifiers <<
+         " vk=" << vk);
+
+  if (id == HOTKEY_ID_F5) {
+    captureScreen();
+  }
 }
 
 
@@ -133,10 +202,7 @@ LRESULT CALLBACK GTLMainWindow::handleMessage(
       return 0;
 
     case WM_HOTKEY:
-      TRACE2(L"WM_HOTKEY:"
-             " wParam=" << wParam <<
-             " LO(lParam)=" << LOWORD(lParam) <<
-             " HI(lParam)=" << HIWORD(lParam));
+      onHotKey(wParam, LOWORD(lParam), HIWORD(lParam));
       return 0;
 
     case WM_KEYDOWN:

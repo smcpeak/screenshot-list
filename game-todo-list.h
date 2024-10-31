@@ -19,8 +19,14 @@ public:      // data
 public:      // methods
   GTLMainWindow();
 
+  // Take a screen capture and add it to the "to do" list.
+  void captureScreen();
+
   // Handle `WM_PAINT`.
   void onPaint();
+
+  // Handle `WM_HOTKEY`.
+  void onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk);
 
   // Handle `WM_KEYDOWN`.  Return true if handled.
   bool onKeyDown(WPARAM wParam, LPARAM lParam);

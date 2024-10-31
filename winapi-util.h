@@ -170,4 +170,45 @@ public:      // methods
   SelectRestoreObject SMBASE_PP_CAT(selRestorer,__LINE__)((hdc), (hobj)) /* user ; */
 
 
+// Hold a handle to a display context (HDC), releasing it with
+// `ReleaseDC` when exiting scope.
+class HDCReleaser {
+  NO_OBJECT_COPIES(HDCReleaser);
+
+public:      // data
+  // The window with which the DC is associated.  (It is dumb that this
+  // is needed, but that is how `ReleaseDC` works.)
+  HWND m_hwnd;
+
+  // The HDC we are holding.
+  HDC m_hdc;
+
+public:      // methods
+  HDCReleaser(HWND hwnd, HDC hdc);
+  ~HDCReleaser();
+};
+
+
+// Declare an HDC called `hdcVar`.  Initialize it by calling
+// `GetDC(hwnd)`.  At the end of the scope, release it.
+#define GET_AND_RELEASE_HDC(hdcVar, hwnd)      \
+  HDC hdcVar;                                  \
+  CALL_HANDLE_WINAPI(hdcVar, GetDC, hwnd);     \
+  HDCReleaser hdcVar##_releaser(hwnd, hdcVar);
+
+
+// Delete a GDI object when going out of scope.
+class GDIObjectDeleter {
+  NO_OBJECT_COPIES(GDIObjectDeleter);
+
+public:      // data
+  // The object to be deleted.
+  HGDIOBJ m_obj;
+
+public:      // methods
+  GDIObjectDeleter(HGDIOBJ obj);
+  ~GDIObjectDeleter();
+};
+
+
 #endif // WINAPI_UTIL_H

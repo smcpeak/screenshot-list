@@ -42,8 +42,9 @@ int g_tracingLevel = 1;
 #define TRVAL(expr) L" " WIDE_STRINGIZE(expr) L"=" << (expr)
 
 
-// Identifier for the registered hotkey F5.
+// Identifiers for the registered hotkeys.
 static int const HOTKEY_ID_F5 = 1;
+static int const HOTKEY_ID_UP = 2;
 
 
 GTLMainWindow::GTLMainWindow()
@@ -100,12 +101,17 @@ LRESULT CALLBACK GTLMainWindow::handleMessage(
         SendMessage(m_hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
       }
 
-      // Register the hotkey.
+      // Register the hotkeys.
       CALL_BOOL_WINAPI(RegisterHotKey,
         m_hwnd,
         HOTKEY_ID_F5,        // id
         0,                   // fsModifiers
         VK_F5);              // vk
+      CALL_BOOL_WINAPI(RegisterHotKey,
+        m_hwnd,
+        HOTKEY_ID_UP,        // id
+        0,                   // fsModifiers
+        VK_UP);              // vk
 
       return 0;
 
@@ -115,6 +121,9 @@ LRESULT CALLBACK GTLMainWindow::handleMessage(
       CALL_BOOL_WINAPI(UnregisterHotKey,
         m_hwnd,
         HOTKEY_ID_F5);
+      CALL_BOOL_WINAPI(UnregisterHotKey,
+        m_hwnd,
+        HOTKEY_ID_UP);
 
       PostQuitMessage(0);
       return 0;

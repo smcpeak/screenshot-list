@@ -3,8 +3,12 @@
 
 #include "screenshot.h"                // this module
 
+#include "winapi-util.h"               // CompatibleDC, etc.
+
 #include <cwchar>                      // std::swprintf
 #include <string>                      // std::wstring
+
+#include <windows.h>                   // GetLocalTime, etc.
 
 
 // Return the current date/time, in the local time zone, in
@@ -77,6 +81,33 @@ Screenshot::~Screenshot()
   if (m_bitmap) {
     CALL_BOOL_WINAPI(DeleteObject, m_bitmap);
   }
+}
+
+
+void Screenshot::drawToDC(HDC hdc, int x, int y, int w, int h)
+{
+  CompatibleHDC memDC(hdc);
+
+  // Select the screenshot into the memory DC so the bitmap will act
+  // as its data source.
+  SELECT_RESTORE_OBJECT(memDC.m_hdc, m_bitmap);
+
+  // The MS docs claim this is the "best" stretch mode.
+  SetStretchBltMode(memDC.m_hdc, HALFTONE);
+
+  // Copy the screenshot with stretching.
+  //
+  // TODO: Preserve the aspect ratio!
+  //
+  CALL_BOOL_WINAPI(StretchBlt,
+    hdc,                               // hdcDest
+    x, y,                              // xDest, yDest
+    w, h,                              // wDest, hDest
+    memDC.m_hdc,                       // hdcSrc
+    0, 0,                              // xSrc, ySrc
+    m_width,                           // wSrc
+    m_height,                          // hSrc
+    SRCCOPY);                          // rop
 }
 
 

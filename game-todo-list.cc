@@ -114,34 +114,14 @@ void GTLMainWindow::onPaint()
         screenshot->m_timestamp.c_str(),
         screenshot->m_timestamp.size());
 
-      CompatibleHDC memDC(hdc);
-
-      // Select the screenshot into the memory DC so the bitmap will act
-      // as its data source.
-      SELECT_RESTORE_OBJECT(memDC.m_hdc, screenshot->m_bitmap);
-
-      // The MS docs claim this is the "best" stretch mode.
-      SetStretchBltMode(memDC.m_hdc, HALFTONE);
-
-      // Region of our window to fill with the screenshot.
       RECT rcClient;
       CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
 
-      // Copy the screenshot into our window with stretching.
-      //
-      // TODO: Preserve the aspect ratio!
-      //
       int const y = 20;
-      CALL_BOOL_WINAPI(StretchBlt,
-        hdc,                               // hdcDest
-        0, y,                              // xDest, yDest
-        rcClient.right,                    // wDest
-        rcClient.bottom - y,               // hDest
-        memDC.m_hdc,                       // hdcSrc
-        0, 0,                              // xSrc, ySrc
-        screenshot->m_width,               // wSrc
-        screenshot->m_height,              // hSrc
-        SRCCOPY);                          // rop
+      screenshot->drawToDC(hdc,
+        0, y,
+        rcClient.right,
+        rcClient.bottom - y);
     }
 
     else {

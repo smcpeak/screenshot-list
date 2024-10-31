@@ -6,9 +6,9 @@
 
 #include "winapi-util.h"               // NO_OBJECT_COPIES
 
-#include <windows.h>                   // HBITMAP
-
 #include <string>                      // std::wstring
+
+#include <windows.h>                   // HBITMAP
 
 
 // A single in-game screenshot, and some miscellaneous related data.
@@ -31,6 +31,9 @@ public:
   Screenshot();
 
   ~Screenshot();
+
+  // Draw the bitmap to `hdc` at the specified coordinates.
+  void drawToDC(HDC hdc, int x, int y, int w, int h);
 };
 
 

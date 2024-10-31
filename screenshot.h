@@ -8,7 +8,8 @@
 
 #include <windows.h>                   // HBITMAP
 
-#include <string>                      // std::string
+#include <string>                      // std::wstring
+
 
 // A single in-game screenshot, and some miscellaneous related data.
 class Screenshot {
@@ -23,7 +24,7 @@ public:      // data
   int m_height;
 
   // Timestamp when the shot was taken, in "YYYY-MM-DD hh:mm" format.
-  std::string m_timestamp;
+  std::wstring m_timestamp;
 
 public:
   // Capture the current screen contents.
@@ -31,5 +32,6 @@ public:
 
   ~Screenshot();
 };
+
 
 #endif // SCREENSHOT_H

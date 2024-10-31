@@ -3,29 +3,31 @@
 
 #include "screenshot.h"                // this module
 
-#include <cstdio>                      // std::snprintf
-#include <ctime>                       // std::{time_t, tm, localtime, time}
+#include <cwchar>                      // std::swprintf
+#include <string>                      // std::wstring
 
 
 // Return the current date/time, in the local time zone, in
-// "YYYY-MM-DD hh:mm" format.
-static std::string getLocaltime()
+// "YYYY-MM-DD hh:mm:ss" format.
+static std::wstring getLocaltime()
 {
-  std::time_t time = std::time(nullptr);
-  std::tm const *t = std::localtime(&time);
+  SYSTEMTIME st;
+  GetLocalTime(&st);
 
-  // 17 would be enough for 4-digit years, but years do not technically
-  // have an upper bound.
-  char buf[30];
+  // 20 would be enough for 4-digit years, but years do not technically
+  // have an upper bound (although the Windows API limits them to ~30k).
+  wchar_t buf[30];
 
-  snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d",
-    t->tm_year + 1900,
-    t->tm_mon + 1,
-    t->tm_mday,
-    t->tm_hour,
-    t->tm_min);
+  swprintf(buf, sizeof(buf) / sizeof(buf[0]),
+    L"%04d-%02d-%02d %02d:%02d:%02d",
+    (int)st.wYear,
+    (int)st.wMonth,
+    (int)st.wDay,
+    (int)st.wHour,
+    (int)st.wMinute,
+    (int)st.wSecond);
 
-  return std::string(buf);
+  return std::wstring(buf);
 }
 
 

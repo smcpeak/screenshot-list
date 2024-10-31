@@ -108,11 +108,11 @@ void GTLMainWindow::onPaint()
     if (!m_screenshots.empty()) {
       Screenshot *screenshot = m_screenshots.front().get();
 
-      wchar_t const *msg = L"TODO: timestamp";
       CALL_BOOL_WINAPI(TextOut,
         hdc,
         0, 0,
-        msg, std::wcslen(msg));
+        screenshot->m_timestamp.c_str(),
+        screenshot->m_timestamp.size());
 
       CompatibleHDC memDC(hdc);
 

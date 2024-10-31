@@ -14,6 +14,7 @@
 #include <cstring>                     // std::wstrlen
 #include <cwchar>                      // std::wcslen
 #include <iostream>                    // std::{wcerr, flush}
+#include <memory>                      // std::make_unique
 #include <sstream>                     // std::wostringstream
 
 
@@ -54,7 +55,7 @@ static int const hotkeyVKs[] = {
 
 
 GTLMainWindow::GTLMainWindow()
-  : m_screenshot()
+  : m_screenshots()
 {}
 
 
@@ -64,7 +65,7 @@ GTLMainWindow::~GTLMainWindow()
 
 void GTLMainWindow::captureScreen()
 {
-  m_screenshot.reset(new Screenshot());
+  m_screenshots.push_front(std::make_unique<Screenshot>());
   invalidateAllPixels();
 }
 
@@ -101,12 +102,23 @@ void GTLMainWindow::onPaint()
   {
     FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
 
-    if (m_screenshot) {
+    HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
+    SELECT_RESTORE_OBJECT(hdc, hFont);
+
+    if (!m_screenshots.empty()) {
+      Screenshot *screenshot = m_screenshots.front().get();
+
+      wchar_t const *msg = L"TODO: timestamp";
+      CALL_BOOL_WINAPI(TextOut,
+        hdc,
+        0, 0,
+        msg, std::wcslen(msg));
+
       CompatibleHDC memDC(hdc);
 
       // Select the screenshot into the memory DC so the bitmap will act
       // as its data source.
-      SELECT_RESTORE_OBJECT(memDC.m_hdc, m_screenshot->m_bitmap);
+      SELECT_RESTORE_OBJECT(memDC.m_hdc, screenshot->m_bitmap);
 
       // The MS docs claim this is the "best" stretch mode.
       SetStretchBltMode(memDC.m_hdc, HALFTONE);
@@ -119,22 +131,20 @@ void GTLMainWindow::onPaint()
       //
       // TODO: Preserve the aspect ratio!
       //
+      int const y = 20;
       CALL_BOOL_WINAPI(StretchBlt,
         hdc,                               // hdcDest
-        0, 0,                              // xDest, yDest
+        0, y,                              // xDest, yDest
         rcClient.right,                    // wDest
-        rcClient.bottom,                   // hDest
+        rcClient.bottom - y,               // hDest
         memDC.m_hdc,                       // hdcSrc
         0, 0,                              // xSrc, ySrc
-        m_screenshot->m_width,             // wSrc
-        m_screenshot->m_height,            // hSrc
+        screenshot->m_width,               // wSrc
+        screenshot->m_height,              // hSrc
         SRCCOPY);                          // rop
     }
 
     else {
-      HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
-      SELECT_RESTORE_OBJECT(hdc, hFont);
-
       wchar_t const *msg = L"No screenshot";
       CALL_BOOL_WINAPI(TextOut, hdc, 10, 10, msg, std::wcslen(msg));
     }
@@ -157,9 +167,11 @@ void GTLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
   }
 
   if (id == VK_DELETE) {
-    // Discard the current screenshot.
-    m_screenshot.reset();
-    invalidateAllPixels();
+    // Discard the top-most screenshot.
+    if (!m_screenshots.empty()) {
+      m_screenshots.pop_front();
+      invalidateAllPixels();
+    }
   }
 }
 

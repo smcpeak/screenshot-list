@@ -11,20 +11,21 @@
 
 #include <windows.h>                   // Windows API
 
+#include <deque>                       // std::deque
 #include <memory>                      // std::unique_ptr
 
 
 // Main window of the "to do" app.
 class GTLMainWindow : public BaseWindow {
 public:      // data
-  // A screenshot, if we have one.
-  std::unique_ptr<Screenshot> m_screenshot;
+  // Sequence of screenshots, most recent first.
+  std::deque<std::unique_ptr<Screenshot>> m_screenshots;
 
 public:      // methods
   GTLMainWindow();
   ~GTLMainWindow();
 
-  // Take a screen capture and add it to the "to do" list.
+  // Take a screen capture and prepend it to the "to do" list.
   void captureScreen();
 
   // register/unregister our global hotkeys.

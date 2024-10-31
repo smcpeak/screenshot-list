@@ -32,7 +32,9 @@ public:
 
   ~Screenshot();
 
-  // Draw the bitmap to `hdc` at the specified coordinates.
+  // Draw the bitmap to `hdc` at the specified coordinates.  This
+  // preserves the source image aspect ratio, drawing window background
+  // color bars on the sides as needed to fill the space.
   void drawToDC(HDC hdc, int x, int y, int w, int h);
 };
 

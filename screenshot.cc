@@ -86,6 +86,18 @@ Screenshot::~Screenshot()
 
 void Screenshot::drawToDC(HDC hdc, int x, int y, int w, int h)
 {
+  // Ignore zero-size draw requests.  This also avoids dividing by zero
+  // when computing the aspect ratio if `h` is zero.
+  if (w <= 0 || h <= 0) {
+    return;
+  }
+
+  if (m_width <= 0 || m_height <= 0) {
+    // If the screenshot is empty, just clear the entire rectangle.
+    fillRectBG(hdc, x, y, w, h);
+    return;
+  }
+
   CompatibleHDC memDC(hdc);
 
   // Select the screenshot into the memory DC so the bitmap will act
@@ -95,19 +107,59 @@ void Screenshot::drawToDC(HDC hdc, int x, int y, int w, int h)
   // The MS docs claim this is the "best" stretch mode.
   SetStretchBltMode(memDC.m_hdc, HALFTONE);
 
-  // Copy the screenshot with stretching.
-  //
-  // TODO: Preserve the aspect ratio!
-  //
-  CALL_BOOL_WINAPI(StretchBlt,
-    hdc,                               // hdcDest
-    x, y,                              // xDest, yDest
-    w, h,                              // wDest, hDest
-    memDC.m_hdc,                       // hdcSrc
-    0, 0,                              // xSrc, ySrc
-    m_width,                           // wSrc
-    m_height,                          // hSrc
-    SRCCOPY);                          // rop
+  // Aspect ratio of the source image.
+  float srcAR = (float)m_width / (float)m_height;
+
+  // Aspect ratio of the destination rectangle.
+  float destAR = (float)w / (float)h;
+
+  if (srcAR < destAR) {
+    // Source is narrower, so draw bars on left and right.
+    int properWidth = (int)(h * srcAR);
+    int excess = w - properWidth;
+    int leftBarW = excess / 2;
+    int rightBarW = excess - leftBarW;
+
+    // Left bar.
+    fillRectBG(hdc, x, y, leftBarW, h);
+
+    // Right bar.
+    fillRectBG(hdc, x+leftBarW+properWidth, y, rightBarW, h);
+
+    // Image.
+    CALL_BOOL_WINAPI(StretchBlt,
+      hdc, x+leftBarW, y, properWidth, h,        // dest, x, y, w, h
+      memDC.m_hdc, 0, 0, m_width, m_height,      // src, x, y, w, h
+      SRCCOPY);                                  // rop
+  }
+
+  else if (srcAR > destAR) {
+    // Source is wider, so draw bars on top and bottom.
+    int properHeight = (int)(w / srcAR);
+    int excess = h - properHeight;
+    int topBarH = excess / 2;
+    int bottomBarH = excess - topBarH;
+
+    // Top bar.
+    fillRectBG(hdc, x, y, w, topBarH);
+
+    // Bottom bar.
+    fillRectBG(hdc, x, y+topBarH+properHeight, w, bottomBarH);
+
+    // Image.
+    CALL_BOOL_WINAPI(StretchBlt,
+      hdc, x, y+topBarH, w, properHeight,        // dest, x, y, w, h
+      memDC.m_hdc, 0, 0, m_width, m_height,      // src, x, y, w, h
+      SRCCOPY);                                  // rop
+  }
+
+  else {
+    // Matching aspect ratios, no need for bars.
+    CALL_BOOL_WINAPI(StretchBlt,
+      hdc, x, y, w, h,                           // dest, x, y, w, h
+      memDC.m_hdc, 0, 0, m_width, m_height,      // src, x, y, w, h
+      SRCCOPY);                                  // rop
+  }
 }
 
 

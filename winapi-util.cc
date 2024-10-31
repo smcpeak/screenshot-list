@@ -221,4 +221,16 @@ HGDIOBJ GDIObjectDeleter::release()
 }
 
 
+// ----------------------------- GDI utils -----------------------------
+void fillRectBG(HDC hdc, int x, int y, int w, int h)
+{
+  RECT r;
+  r.left = x;
+  r.top = y;
+  r.right = x+w;
+  r.bottom = y+h;
+  FillRect(hdc, &r, (HBRUSH) (COLOR_WINDOW+1));
+}
+
+
 // EOF

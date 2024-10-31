@@ -227,4 +227,8 @@ public:      // methods
 };
 
 
+// Paint a rectangle to `hdc` using the window background color.
+void fillRectBG(HDC hdc, int x, int y, int w, int h);
+
+
 #endif // WINAPI_UTIL_H

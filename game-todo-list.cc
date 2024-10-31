@@ -49,6 +49,7 @@ int g_tracingLevel = 1;
 static int const hotkeyVKs[] = {
   VK_F5,
   VK_UP,
+  VK_DELETE,
 };
 
 
@@ -151,7 +152,14 @@ void GTLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
          " vk=" << vk);
 
   if (id == VK_F5) {
+    // Take a new screenshot.
     captureScreen();
+  }
+
+  if (id == VK_DELETE) {
+    // Discard the current screenshot.
+    m_screenshot.reset();
+    invalidateAllPixels();
   }
 }
 

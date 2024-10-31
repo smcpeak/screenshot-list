@@ -29,6 +29,8 @@ LDFLAGS += -static
 
 LIBS :=
 
+# SelectObject, etc.
+LIBS += -lgdi32
 
 OBJS :=
 OBJS += base-window.o

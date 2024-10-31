@@ -147,4 +147,27 @@ HWND CreateWindowExWArgs::createWindow() const
 }
 
 
+// ------------------------ SelectRestoreObject ------------------------
+SelectRestoreObject::SelectRestoreObject(HDC hdc, HGDIOBJ newObj)
+  : m_hdc(hdc),
+    m_prevObj(nullptr)
+{
+  m_prevObj = SelectObject(m_hdc, newObj);
+  if (!m_prevObj) {
+    // The docs do not say that `GetLastError` can be used in this
+    // case...
+    winapiDie(L"SelectObject(set)");
+  }
+}
+
+
+SelectRestoreObject::~SelectRestoreObject()
+{
+  // Restore the old object.
+  if (!SelectObject(m_hdc, m_prevObj)) {
+    winapiDie(L"SelectObject(restore)");
+  }
+}
+
+
 // EOF

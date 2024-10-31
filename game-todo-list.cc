@@ -5,7 +5,7 @@
 
 #include "game-todo-list.h"            // this module
 
-#include "winapi-util.h"               // WIDE_STRINGIZE
+#include "winapi-util.h"               // WIDE_STRINGIZE, SELECT_RESTORE_OBJECT
 
 #include <windows.h>                   // Windows API
 
@@ -52,7 +52,15 @@ void GTLMainWindow::onPaint()
   HDC hdc;
   CALL_HANDLE_WINAPI(hdc, BeginPaint, m_hwnd, &ps);
 
-  FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
+  // Open a scope so selected objects can be restored at scope exit.
+  {
+    FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
+
+    HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
+    SELECT_RESTORE_OBJECT(hdc, hFont);
+
+    CALL_BOOL_WINAPI(TextOut, hdc, 10, 10, L"Sample text", 11);
+  }
 
   EndPaint(m_hwnd, &ps);
 }
@@ -62,6 +70,14 @@ bool GTLMainWindow::onKeyDown(WPARAM wParam, LPARAM lParam)
 {
   TRACE2(L"onKeyDown:" << std::hex <<
          TRVAL(wParam) << TRVAL(lParam) << std::dec);
+
+  switch (wParam) {
+    case 'Q':
+      // Q to quit.
+      TRACE2(L"Saw Q keypress.");
+      PostMessage(m_hwnd, WM_CLOSE, 0, 0);
+      return true;
+  }
 
   // Not handled.
   return false;

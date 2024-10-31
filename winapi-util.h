@@ -11,6 +11,20 @@
 #include <string>                      // std::{string, wstring}
 
 
+// Concatenate tokens.  Unlike plain '##', this works for __LINE__.  It
+// is the same as BOOST_PP_CAT.
+#define SMBASE_PP_CAT(a,b) SMBASE_PP_CAT2(a,b)
+#define SMBASE_PP_CAT2(a,b) a##b
+
+
+// put at the top of a class for which the default copy ctor
+// and operator= are not desired; then don't define these functions
+#define NO_OBJECT_COPIES(name)   \
+  private:                       \
+    name(name&);                 \
+    void operator=(name&) /*user ;*/
+
+
 // Stringize an argument as a wide string.
 #define WIDE_STRINGIZE_HELPER(x) L ## x
 #define WIDE_STRINGIZE(x) WIDE_STRINGIZE_HELPER(#x)
@@ -126,6 +140,34 @@ void safeRelease(T *&ptr)
     ptr = nullptr;
   }
 }
+
+
+// Class that calls `SelectObject` in its ctor, then again in its dtor
+// to restore the value.
+//
+// Note: This cannot be used to select region objects!  The
+// `SelectObject` API for them is different.
+//
+class SelectRestoreObject {
+  NO_OBJECT_COPIES(SelectRestoreObject);
+
+public:      // data
+  // The display context being manipulated.
+  HDC m_hdc;
+
+  // The previous object of the same type as that passed to the ctor.
+  HGDIOBJ m_prevObj;
+
+public:      // methods
+  SelectRestoreObject(HDC hdc, HGDIOBJ newObj);
+  ~SelectRestoreObject();
+};
+
+
+// Use `SelectObject` to select `hobj` within `hdc`, then upon exiting
+// the scope, restore the previous object that had that type.
+#define SELECT_RESTORE_OBJECT(hdc, hobj) \
+  SelectRestoreObject SMBASE_PP_CAT(selRestorer,__LINE__)((hdc), (hobj)) /* user ; */
 
 
 #endif // WINAPI_UTIL_H

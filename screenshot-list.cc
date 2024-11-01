@@ -450,6 +450,7 @@ bool SLMainWindow::onKeyDown(WPARAM wParam, LPARAM lParam)
 // Menu IDs.
 enum {
   IDM_QUIT = 1,
+  IDM_ABOUT,
 };
 
 
@@ -465,6 +466,14 @@ void SLMainWindow::createAppMenu()
     appendMenuW(menuBar, MF_POPUP, (UINT_PTR)menu, L"&File");
   }
 
+  {
+    HMENU menu = createMenu();
+
+    appendMenuW(menu, MF_STRING, IDM_ABOUT, L"&About...");
+
+    appendMenuW(menuBar, MF_POPUP, (UINT_PTR)menu, L"&Help");
+  }
+
   setMenu(m_hwnd, menuBar);
 }
 
@@ -474,6 +483,18 @@ void SLMainWindow::onCommand(int menuId)
   switch (menuId) {
     case IDM_QUIT:
       PostMessage(m_hwnd, WM_CLOSE, 0, 0);
+      break;
+
+    case IDM_ABOUT:
+      MessageBox(m_hwnd,
+
+        L"Screenshot List v1.0\n"
+        L"(c) 2024 Scott McPeak\n"
+        L"Licensed under the MIT open source license; see license.txt\n"
+        L"Icon: freepik.com/icon/camera_1042390\n",
+
+        L"About Screenshot List",
+        MB_OK);
       break;
   }
 }

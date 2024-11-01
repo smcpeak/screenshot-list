@@ -45,4 +45,47 @@ void DCX::textOut_incY(std::wstring const &text)
 }
 
 
+// Return the sum of all elements in `vec`.
+static int vectorSum(std::vector<int> const &vec)
+{
+  int ret = 0;
+
+  for (int n : vec) {
+    ret += n;
+  }
+
+  return ret;
+}
+
+
+std::vector<DCX> DCX::splitHorizontallyFromRight(
+  std::vector<int> const &widths) const
+{
+  std::vector<DCX> ret;
+
+  // Start with the left partition taking all space remaining after
+  // the other columns are accounted for.
+  DCX dcx(*this);
+  dcx.w -= vectorSum(widths);
+  ret.push_back(dcx);
+
+  for (int w : widths) {
+    // Construct the next partition.
+    dcx.x += dcx.w;
+    dcx.w = w;
+    ret.push_back(dcx);
+  }
+
+  return ret;
+}
+
+
+void DCX::shrinkByMargin(int margin)
+{
+  x += margin;
+  y += margin;
+  w -= margin*2;
+  h -= margin*2;
+}
+
 // EOF

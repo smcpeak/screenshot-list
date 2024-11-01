@@ -107,30 +107,15 @@ void GTLMainWindow::unregisterHotkeys()
 }
 
 
-int GTLMainWindow::getListXCoord(DCX const &dcxWindow) const
+void GTLMainWindow::drawDivider(DCX dcx) const
 {
-  return std::max(dcxWindow.w - m_listWidth, 0);
-}
-
-
-void GTLMainWindow::drawDivider(DCX const &dcxWindow) const
-{
-  DCX dcx(dcxWindow);
-  dcx.x = getListXCoord(dcx) - c_dividerWidth;
-  dcx.w = c_dividerWidth;
   dcx.fillRectSysColor(COLOR_GRAYTEXT);
 }
 
 
-void GTLMainWindow::drawLargeShot(DCX const &dcxWindow) const
+void GTLMainWindow::drawLargeShot(DCX dcx) const
 {
-  DCX dcx(dcxWindow);
-  dcx.x = c_largeShotMargin;
-  dcx.y = c_largeShotMargin;
-  dcx.w = dcxWindow.w
-            - m_listWidth
-            - c_dividerWidth
-            - c_largeShotMargin*2;
+  dcx.shrinkByMargin(c_largeShotMargin);
 
   if (m_screenshots.empty()) {
     dcx.textOut(L"No screenshots");
@@ -146,12 +131,9 @@ void GTLMainWindow::drawLargeShot(DCX const &dcxWindow) const
 }
 
 
-void GTLMainWindow::drawShotList(DCX const &dcxWindow) const
+void GTLMainWindow::drawShotList(DCX dcx) const
 {
-  DCX dcx(dcxWindow);
-  dcx.x = getListXCoord(dcxWindow) + c_listMargin;
-  dcx.y = c_listMargin;
-  dcx.w = m_listWidth - c_listMargin*2;
+  dcx.shrinkByMargin(c_listMargin);
 
   // Draw the screenshots.
   if (m_screenshots.empty()) {
@@ -186,10 +168,14 @@ void GTLMainWindow::onPaint()
     HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
     SELECT_RESTORE_OBJECT(hdc, hFont);
 
+    // Split the window into three regions.
+    std::vector<DCX> dcxColumns = dcxWindow.splitHorizontallyFromRight(
+      std::vector<int>{c_dividerWidth, m_listWidth});
+
     // Draw the window elements.
-    drawDivider(dcxWindow);
-    drawLargeShot(dcxWindow);
-    drawShotList(dcxWindow);
+    drawLargeShot(dcxColumns[0]);
+    drawDivider(dcxColumns[1]);
+    drawShotList(dcxColumns[2]);
   }
 
   EndPaint(m_hwnd, &ps);

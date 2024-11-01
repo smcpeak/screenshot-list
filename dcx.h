@@ -5,6 +5,7 @@
 #define DCX_H
 
 #include <string>                      // std::wstring
+#include <vector>                      // std::vector
 
 #include <windows.h>                   // HDC
 
@@ -37,6 +38,17 @@ public:      // data
   // any clipping region.  Rather, the idea is to encapsulate the area
   // where painting is intended to be focused.  Clients can freely
   // manipulate these fields to adjust the area of interest.
+  //
+  // This class, itself, does not impose any invariants on the
+  // coordinate values.  In particular, they might be zero or negative.
+  // Clients are expected to negotiate among themselves to deal with
+  // those possibilities, generally by ignoring drawing requests that
+  // are nonsensical when they arrive (especially non-positive sizes).
+  // The drawing routines this class provides do that (albeit by letting
+  // the underlying API do it).  That way, the arithmetic remains fairly
+  // uniform and degenerate cases are handled with a minimum of
+  // special-case logic.
+  //
   int x;
   int y;
   int w;
@@ -66,6 +78,17 @@ public:      // methods
 
   // Draw `text` and increment `m_y` by the text height.
   void textOut_incY(std::wstring const &text);
+
+  // Given N widths, return a DCX that splits `*this` into N+1 columns,
+  // where the leftmost column's width is whatever is left over after
+  // the others are accounted for.  The resulting width might be
+  // negative.  None of the input widths should be negative since that
+  // would result in overlapping partitions.
+  std::vector<DCX> splitHorizontallyFromRight(
+    std::vector<int> const &widths) const;
+
+  // Reduce the area by `margin` pixels on all four sides.
+  void shrinkByMargin(int margin);
 };
 
 

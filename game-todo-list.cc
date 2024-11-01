@@ -181,9 +181,7 @@ void GTLMainWindow::drawShotList(DCX dcx) const
         dcxHighlight.shrinkByMargin(-c_listHighlightFrameThickness);
 
         // Draw it first so the shot covers most of the highlight
-        // rectangle, leaving just a rectangular frame.  (Like
-        // elsewhere, this causes flickering due to clumsily drawing
-        // pixels more than once, and ideally should be fixed.)
+        // rectangle, leaving just a rectangular frame.
         dcxHighlight.fillRectSysColor(COLOR_HIGHLIGHT);
       }
 
@@ -206,28 +204,44 @@ void GTLMainWindow::onPaint()
   HDC hdc;
   CALL_HANDLE_WINAPI(hdc, BeginPaint, m_hwnd, &ps);
 
+  RECT rcClient;
+  CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
+
   // Open a scope so selected objects can be restored at scope exit.
   {
-    DCX dcxWindow(hdc, m_hwnd);
+    // Make an in-memory DC for double buffering to avoid flicker.
+    BitmapDC memDC(hdc, rcClient.right, rcClient.bottom);
 
-    // Clear the window to the background color.
-    //
-    // TODO: This causes flickering because some pixels are drawn more
-    // than once.  Ideally I would fix that.
-    //
-    dcxWindow.fillRectBG();
+    // Actual drawing.
+    {
+      // DCX to draw to.
+      DCX dcxWindow(memDC.getDC(), m_hwnd);
 
-    HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
-    SELECT_RESTORE_OBJECT(hdc, hFont);
+      // Clear the window to the background color.
+      dcxWindow.fillRectBG();
 
-    // Split the window into three regions.
-    std::vector<DCX> dcxColumns = dcxWindow.splitHorizontallyFromRight(
-      std::vector<int>{c_dividerWidth, m_listWidth});
+      HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
+      SELECT_RESTORE_OBJECT(dcxWindow.hdc, hFont);
 
-    // Draw the window elements.
-    drawLargeShot(dcxColumns[0]);
-    drawDivider(dcxColumns[1]);
-    drawShotList(dcxColumns[2]);
+      // Split the window into three regions.
+      std::vector<DCX> dcxColumns = dcxWindow.splitHorizontallyFromRight(
+        std::vector<int>{c_dividerWidth, m_listWidth});
+
+      // Draw the window elements.
+      drawLargeShot(dcxColumns[0]);
+      drawDivider(dcxColumns[1]);
+      drawShotList(dcxColumns[2]);
+    }
+
+    // Copy from hidden buffer.
+    CALL_BOOL_WINAPI(BitBlt,
+      hdc,                               // hdcDest
+      0, 0,                              // xDest, yDest
+      rcClient.right,                    // wDest
+      rcClient.bottom,                   // hDest
+      memDC.getDC(),                     // hdcSrc
+      0, 0,                              // xSrc, ySrc
+      SRCCOPY);                          // rop
   }
 
   EndPaint(m_hwnd, &ps);

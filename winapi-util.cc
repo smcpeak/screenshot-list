@@ -199,6 +199,30 @@ CompatibleHDC::~CompatibleHDC()
 }
 
 
+// ----------------------------- BitmapDC ------------------------------
+BitmapDC::BitmapDC(HDC hdc, int w, int h)
+  : m_memDC(hdc),
+    m_bitmap(createCompatibleBitmap(hdc, w, h)),
+    m_selectRestore(m_memDC.m_hdc, m_bitmap)
+{}
+
+
+BitmapDC::~BitmapDC()
+{
+  if (m_bitmap) {
+    CALL_BOOL_WINAPI(DeleteObject, m_bitmap);
+  }
+}
+
+
+HBITMAP BitmapDC::releaseBitmap()
+{
+  HBITMAP ret = m_bitmap;
+  m_bitmap = nullptr;
+  return ret;
+}
+
+
 // ------------------------- GDIObjectDeleter --------------------------
 GDIObjectDeleter::GDIObjectDeleter(HGDIOBJ obj)
   : m_obj(obj)
@@ -259,6 +283,15 @@ SIZE textOut(HDC hdc, int x, int y, std::wstring const &text)
     &sz);
 
   return sz;
+}
+
+
+HBITMAP createCompatibleBitmap(HDC hdc, int w, int h)
+{
+  HBITMAP ret;
+  CALL_HANDLE_WINAPI(ret, CreateCompatibleBitmap,
+    hdc, w, h);
+  return ret;
 }
 
 

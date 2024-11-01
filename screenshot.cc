@@ -44,36 +44,19 @@ Screenshot::Screenshot()
 {
   GET_AND_RELEASE_HDC(hdcScreen, NULL);
 
-  CompatibleHDC memDC(hdcScreen);
+  // Screenshot with result going to a memory DC.
+  BitmapDC memDC(hdcScreen, m_width, m_height);
+  CALL_BOOL_WINAPI(BitBlt,
+    memDC.getDC(),                     // hdcDest
+    0, 0,                              // xDest, yDest
+    m_width,                           // wDest
+    m_height,                          // hDest
+    hdcScreen,                         // hdcSrc
+    0, 0,                              // xSrc, ySrc
+    SRCCOPY);                          // rop
 
-  // Create a compatible bitmap from the screen DC.
-  HBITMAP hbmScreenshot;
-  CALL_HANDLE_WINAPI(hbmScreenshot, CreateCompatibleBitmap,
-    hdcScreen,
-    m_width,
-    m_height);
-  GDIObjectDeleter hbmScreenshot_deleter(hbmScreenshot);
-
-  // Scope to bound when the bitmap is selected in the memory DC.
-  {
-    // Select the bitmap into the memory DC so that writing to the DC
-    // writes to the bitmap.
-    SELECT_RESTORE_OBJECT(memDC.m_hdc, hbmScreenshot);
-
-    // Screenshot with result going to the memory DC.
-    CALL_BOOL_WINAPI(BitBlt,
-      memDC.m_hdc,                       // hdcDest
-      0, 0,                              // xDest, yDest
-      m_width,                           // wDest
-      m_height,                          // hDest
-      hdcScreen,                         // hdcSrc
-      0, 0,                              // xSrc, ySrc
-      SRCCOPY);                          // rop
-  }
-
-  // Now that everything has succeeded, acquire ownership of the
-  // bitmap.
-  m_bitmap = (HBITMAP)hbmScreenshot_deleter.release();
+  // Take ownership of the bitmap.
+  m_bitmap = memDC.releaseBitmap();
 }
 
 

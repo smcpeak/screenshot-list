@@ -206,6 +206,40 @@ public:      // data
 public:      // methods
   CompatibleHDC(HDC other);
   ~CompatibleHDC();
+
+  HDC getDC() const { return m_hdc; }
+};
+
+
+// Display context and backing bitmap for use as a hidden drawing
+// surface.
+class BitmapDC {
+public:      // data
+  // The display context.
+  CompatibleHDC m_memDC;
+
+  // The backing bitmap, created by the constructor.  This will be
+  // destroyed when this object is if it is not null.
+  HBITMAP m_bitmap;
+
+private:     // data
+  // Cause the bitmap to be selected into the DC, and remove it at the
+  // end.
+  SelectRestoreObject m_selectRestore;
+
+public:      // methods
+  // Create the DC and bitmap to be compatible with `hdc`.
+  BitmapDC(HDC hdc, int w, int h);
+
+  // Destroy the memory DC and, if not null, the bitmap.
+  ~BitmapDC();
+
+  HDC getDC() const { return m_memDC.getDC(); }
+
+  // Return the bitmap and nullify `m_bitmap`.  This way, one can use
+  // this object to populate the bitmap and keep it for later use,
+  // discarding the DC in the meantime.
+  HBITMAP releaseBitmap();
 };
 
 
@@ -235,6 +269,9 @@ void fillRectSysColor(HDC hdc, int x, int y, int w, int h, int color);
 
 // Draw `text` at the given coordinate.  Return its pixel dimensions.
 SIZE textOut(HDC hdc, int x, int y, std::wstring const &text);
+
+// Create a bitmap compatible with `hdc`, doing its own error checking.
+HBITMAP createCompatibleBitmap(HDC hdc, int w, int h);
 
 
 #endif // WINAPI_UTIL_H

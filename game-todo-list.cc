@@ -212,7 +212,7 @@ void GTLMainWindow::setVScrollInfo()
   si.nPos = m_listScroll;
   SetScrollInfo(m_hwnd, SB_VERT, &si, TRUE /*redraw*/);
 
-  TRACE2("setVScrollInfo:" <<
+  TRACE3("setVScrollInfo:" <<
     " contentHeight=" << listContentHeight <<
     " max=" << maxScroll <<
     " page=" << windowHeight <<

@@ -1,6 +1,6 @@
-# game-todo-list/Makefile
+# screenshot-list/Makefile
 
-all: game-todo-list.exe
+all: screenshot-list.exe
 
 
 CXX := g++
@@ -35,7 +35,7 @@ LIBS += -lgdi32
 OBJS :=
 OBJS += base-window.o
 OBJS += dcx.o
-OBJS += game-todo-list.o
+OBJS += screenshot-list.o
 OBJS += resources.o
 OBJS += screenshot.o
 OBJS += trace.o
@@ -47,10 +47,10 @@ OBJS += winapi-util.o
 %.o: %.cc
 	$(CXX) -c -o $@ $(CXXFLAGS) $<
 
-resources.o: game-todo-list.rc doc/icon.ico
+resources.o: screenshot-list.rc doc/icon.ico
 	windres -o $@ $<
 
-game-todo-list.exe: $(OBJS)
+screenshot-list.exe: $(OBJS)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJS) $(LIBS)
 
 

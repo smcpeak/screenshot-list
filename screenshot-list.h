@@ -1,10 +1,10 @@
-// game-todo-list.h
-// Main window class of the "to do" list app.
+// screenshot-list.h
+// Main window class of the screenshot list app.
 
 // See license.txt for copyright and terms of use.
 
-#ifndef GAME_TODO_LIST_H
-#define GAME_TODO_LIST_H
+#ifndef SCREENSHOT_LIST_H
+#define SCREENSHOT_LIST_H
 
 #include "base-window.h"               // BaseWindow
 #include "screenshot.h"                // Screenshot
@@ -15,7 +15,10 @@
 #include <memory>                      // std::unique_ptr
 
 
-// Main window of the "to do" app.
+// Main window of the screenshot list app.
+//
+// TODO: Rename this class.
+//
 class GTLMainWindow : public BaseWindow {
 public:      // data
   // Sequence of screenshots, most recent first.
@@ -109,4 +112,4 @@ public:      // methods
 };
 
 
-#endif // GAME_TODO_LIST_H
+#endif // SCREENSHOT_LIST_H

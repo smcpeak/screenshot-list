@@ -1,9 +1,10 @@
-// game-todo-list.cc
-// Program to maintain a TODO list while playing a game in another window.
+// screenshot-list.cc
+// Program to maintain a list of screenshots while playing a game in
+// another window.
 
 // See license.txt for copyright and terms of use.
 
-#include "game-todo-list.h"            // this module
+#include "screenshot-list.h"           // this module
 
 #include "dcx.h"                       // DCX
 #include "trace.h"                     // TRACE2, etc.

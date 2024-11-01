@@ -56,7 +56,10 @@ static int const hotkeyVKs[] = {
 
 // Pixel width of the divider separating the list from the larger-size
 // display of the selected screenshot.
-static int const DIVIDER_WIDTH = 3;
+static int const c_dividerWidth = 3;
+
+// Pixel size of the margin between the list contents and its area edge.
+static int const c_listMargin = 2;
 
 
 GTLMainWindow::GTLMainWindow()
@@ -119,25 +122,29 @@ void GTLMainWindow::onPaint()
 
     // Draw the divider.
     fillRectSysColor(hdc,
-      x - DIVIDER_WIDTH, 0,
-      DIVIDER_WIDTH, rcClient.bottom,
+      x - c_dividerWidth, 0,
+      c_dividerWidth, rcClient.bottom,
       COLOR_GRAYTEXT);
+
+    // Move our "cursor" into the content part of the list.
+    x += c_listMargin;
+    int y = c_listMargin;
 
     // Draw the screenshots.
     if (!m_screenshots.empty()) {
-      int y = 0;
       for (auto const &screenshot : m_screenshots) {
         textOut(hdc, x, y, screenshot->m_timestamp);
-        y += 15;
+        y += 15;        // TODO: Calculate text height.
 
-        int h = screenshot->heightForWidth(m_listWidth);
-        screenshot->drawToDC(hdc, x, y, m_listWidth, h);
+        int innerWidth = m_listWidth - c_listMargin*2;
+        int h = screenshot->heightForWidth(innerWidth);
+        screenshot->drawToDC(hdc, x, y, innerWidth, h);
         y += h;
       }
     }
 
     else {
-      textOut(hdc, x, 0, L"No screenshots");
+      textOut(hdc, x, y, L"No screenshots");
     }
   }
 

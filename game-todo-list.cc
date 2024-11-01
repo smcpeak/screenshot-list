@@ -114,13 +114,18 @@ void GTLMainWindow::onPaint()
 
   // Open a scope so selected objects can be restored at scope exit.
   {
-    FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
+    RECT rcClient;
+    CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
+
+    // Clear the window to the background color.
+    //
+    // TODO: This causes flickering because some pixels are drawn more
+    // than once.  Ideally I would fix that.
+    //
+    fillRectBG(hdc, 0, 0, rcClient.right, rcClient.bottom);
 
     HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
     SELECT_RESTORE_OBJECT(hdc, hFont);
-
-    RECT rcClient;
-    CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
 
     // Left edge of the screenshot list.
     int x = std::max(rcClient.right - m_listWidth, 0L);

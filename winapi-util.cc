@@ -243,13 +243,22 @@ void fillRectSysColor(HDC hdc, int x, int y, int w, int h, int color)
 }
 
 
-void textOut(HDC hdc, int x, int y, std::wstring const &text)
+SIZE textOut(HDC hdc, int x, int y, std::wstring const &text)
 {
   CALL_BOOL_WINAPI(TextOut,
     hdc,
     x, y,
     text.data(),
     text.size());
+
+  SIZE sz;
+  CALL_BOOL_WINAPI(GetTextExtentPoint32W,
+    hdc,
+    text.data(),
+    text.size(),
+    &sz);
+
+  return sz;
 }
 
 

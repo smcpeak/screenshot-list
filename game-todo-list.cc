@@ -133,8 +133,7 @@ void GTLMainWindow::onPaint()
     // Draw the screenshots.
     if (!m_screenshots.empty()) {
       for (auto const &screenshot : m_screenshots) {
-        textOut(hdc, x, y, screenshot->m_timestamp);
-        y += 15;        // TODO: Calculate text height.
+        y += textOut(hdc, x, y, screenshot->m_timestamp).cy;
 
         int innerWidth = m_listWidth - c_listMargin*2;
         int h = screenshot->heightForWidth(innerWidth);

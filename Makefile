@@ -34,6 +34,7 @@ LIBS += -lgdi32
 
 OBJS :=
 OBJS += base-window.o
+OBJS += dcx.o
 OBJS += game-todo-list.o
 OBJS += resources.o
 OBJS += screenshot.o

@@ -4,6 +4,7 @@
 #ifndef SCREENSHOT_H
 #define SCREENSHOT_H
 
+#include "dcx.h"                       // DCX
 #include "winapi-util.h"               // NO_OBJECT_COPIES
 
 #include <string>                      // std::wstring
@@ -40,6 +41,9 @@ public:
   // Like `drawToDC`, but calculate the height for the given width, and
   // return that height.
   int drawToDC_autoHeight(HDC hdc, int x, int y, int w) const;
+
+  // Like `drawToDC_autoHeight`, but use the data in `dcx`.
+  int drawToDCX_autoHeight(DCX const &dcx) const;
 
   // If we want to draw the screenshot within a column of width 'w'
   // pixels, return the corresponding pixel height that will allow the

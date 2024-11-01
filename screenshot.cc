@@ -172,6 +172,12 @@ int Screenshot::drawToDC_autoHeight(HDC hdc, int x, int y, int w) const
 }
 
 
+int Screenshot::drawToDCX_autoHeight(DCX const &dcx) const
+{
+  return drawToDC_autoHeight(dcx.hdc, dcx.x, dcx.y, dcx.w);
+}
+
+
 int Screenshot::heightForWidth(int w) const
 {
   if (m_width > 0) {

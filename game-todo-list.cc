@@ -5,6 +5,7 @@
 
 #include "game-todo-list.h"            // this module
 
+#include "dcx.h"                       // DCX
 #include "winapi-util.h"               // WIDE_STRINGIZE, SELECT_RESTORE_OBJECT, GET_AND_RELEASE_HDC
 
 #include <windows.h>                   // Windows API
@@ -114,63 +115,63 @@ void GTLMainWindow::onPaint()
 
   // Open a scope so selected objects can be restored at scope exit.
   {
-    RECT rcClient;
-    CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
+    DCX dcxWindow(hdc, m_hwnd);
 
     // Clear the window to the background color.
     //
     // TODO: This causes flickering because some pixels are drawn more
     // than once.  Ideally I would fix that.
     //
-    fillRectBG(hdc, 0, 0, rcClient.right, rcClient.bottom);
+    dcxWindow.fillRectBG();
 
     HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
     SELECT_RESTORE_OBJECT(hdc, hFont);
 
     // Left edge of the screenshot list.
-    int x = std::max(rcClient.right - m_listWidth, 0L);
+    int listX = std::max(dcxWindow.w - m_listWidth, 0);
 
     // Draw the divider.
-    fillRectSysColor(hdc,
-      x - c_dividerWidth, 0,
-      c_dividerWidth, rcClient.bottom,
-      COLOR_GRAYTEXT);
-
-    // Move our "cursor" into the content part of the list.
-    x += c_listMargin;
-    int y = c_listMargin;
-
-    // Draw the screenshots.
-    if (!m_screenshots.empty()) {
-      {
-        // Width of the list content area.
-        int innerWidth = m_listWidth - c_listMargin*2;
-
-        for (auto const &screenshot : m_screenshots) {
-          y += screenshot->drawToDC_autoHeight(hdc, x, y, innerWidth);
-          y += c_listMargin;
-        }
-      }
-
-      // Reset the cursor for use in the main area.
-      x = c_largeShotMargin;
-      y = c_largeShotMargin;
-
-      // Width of main area.
-      int w = rcClient.right - m_listWidth
-                             - c_dividerWidth
-                             - c_largeShotMargin*2;
-
-      // Draw timestamp of selected screenshot.
-      Screenshot const *sel = m_screenshots.at(m_selectedIndex).get();
-      y += textOut(hdc, x, y, sel->m_timestamp).cy;
-
-      // Draw a larger version of the selected screenshot.
-      sel->drawToDC_autoHeight(hdc, x, y, w);
+    {
+      DCX dcx(dcxWindow);
+      dcx.x = listX - c_dividerWidth;
+      dcx.w = c_dividerWidth;
+      dcx.fillRectSysColor(COLOR_GRAYTEXT);
     }
 
-    else {
-      textOut(hdc, x, y, L"No screenshots");
+    // Move our "cursor" into the content part of the list.
+    {
+      DCX dcx(dcxWindow);
+      dcx.x = listX + c_listMargin;
+      dcx.y = c_listMargin;
+      dcx.w = m_listWidth - c_listMargin*2;
+
+      // Draw the screenshots.
+      if (!m_screenshots.empty()) {
+        // List content.
+        for (auto const &screenshot : m_screenshots) {
+          dcx.y += screenshot->drawToDCX_autoHeight(dcx);
+          dcx.y += c_listMargin;
+        }
+
+        // Reset the cursor for use in the main area.
+        dcx.x = c_largeShotMargin;
+        dcx.y = c_largeShotMargin;
+        dcx.w = dcxWindow.w
+                  - m_listWidth
+                  - c_dividerWidth
+                  - c_largeShotMargin*2;
+
+        // Draw timestamp of selected screenshot.
+        Screenshot const *sel = m_screenshots.at(m_selectedIndex).get();
+        dcx.textOut_incY(sel->m_timestamp);
+
+        // Draw a larger version of the selected screenshot.
+        sel->drawToDCX_autoHeight(dcx);
+      }
+
+      else {
+        dcx.textOut(L"No screenshots");
+      }
     }
   }
 

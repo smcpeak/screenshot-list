@@ -49,6 +49,12 @@ static int const c_largeShotMargin = 5;
 // up/down buttons are clicked.
 static int const c_vscrollLineAmount = 20;
 
+// If true, use a hidden buffer to eliminate flickering.
+//
+// This variable exists just for occasional diagnostic usage.
+//
+static bool const c_useDoubleBuffer = true;
+
 
 GTLMainWindow::GTLMainWindow()
   : m_screenshots(),
@@ -260,6 +266,25 @@ void GTLMainWindow::onVScroll(int request, int newPos)
 
 
 // ------------------------------ Drawing ------------------------------
+void GTLMainWindow::drawMainWindow(DCX dcx) const
+{
+  // Clear the window to the background color.
+  dcx.fillRectBG();
+
+  HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
+  SELECT_RESTORE_OBJECT(dcx.hdc, hFont);
+
+  // Split the window into three regions.
+  std::vector<DCX> dcxColumns = dcx.splitHorizontallyFromRight(
+    std::vector<int>{c_dividerWidth, m_listWidth});
+
+  // Draw the window elements.
+  drawLargeShot(dcxColumns[0]);
+  drawDivider(dcxColumns[1]);
+  drawShotList(dcxColumns[2]);
+}
+
+
 void GTLMainWindow::drawDivider(DCX dcx) const
 {
   dcx.fillRectSysColor(COLOR_GRAYTEXT);
@@ -337,30 +362,14 @@ void GTLMainWindow::onPaint()
 
   RECT rcClient = getWindowClientArea(m_hwnd);
 
-  // Open a scope so selected objects can be restored at scope exit.
-  {
+  if (c_useDoubleBuffer) {
     // Make an in-memory DC for double buffering to avoid flicker.
     BitmapDC memDC(hdc, rcClient.right, rcClient.bottom);
 
     // Actual drawing.
     {
-      // DCX to draw to.
       DCX dcxWindow(memDC.getDC(), m_hwnd);
-
-      // Clear the window to the background color.
-      dcxWindow.fillRectBG();
-
-      HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
-      SELECT_RESTORE_OBJECT(dcxWindow.hdc, hFont);
-
-      // Split the window into three regions.
-      std::vector<DCX> dcxColumns = dcxWindow.splitHorizontallyFromRight(
-        std::vector<int>{c_dividerWidth, m_listWidth});
-
-      // Draw the window elements.
-      drawLargeShot(dcxColumns[0]);
-      drawDivider(dcxColumns[1]);
-      drawShotList(dcxColumns[2]);
+      drawMainWindow(dcxWindow);
     }
 
     // Copy from hidden buffer.
@@ -372,6 +381,11 @@ void GTLMainWindow::onPaint()
       memDC.getDC(),                     // hdcSrc
       0, 0,                              // xSrc, ySrc
       SRCCOPY);                          // rop
+  }
+
+  else {
+    DCX dcxWindow(hdc, m_hwnd);
+    drawMainWindow(dcxWindow);
   }
 
   EndPaint(m_hwnd, &ps);

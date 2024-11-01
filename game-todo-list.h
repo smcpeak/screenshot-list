@@ -79,6 +79,9 @@ public:      // methods
   void onVScroll(int request, int newPos);
 
   // ----------------------------- Drawing -----------------------------
+  // Draw the main window clinet area.
+  void drawMainWindow(DCX dcx) const;
+
   // Draw the divider.
   void drawDivider(DCX dcx) const;
 

@@ -308,4 +308,29 @@ int getWindowClientHeight(HWND hwnd)
 }
 
 
+// ------------------------------- Menus -------------------------------
+HMENU createMenu()
+{
+  HMENU ret;
+  CALL_HANDLE_WINAPI(ret, CreateMenu);
+  return ret;
+}
+
+
+void setMenu(HWND hwnd, HMENU menu)
+{
+  CALL_BOOL_WINAPI(SetMenu, hwnd, menu);
+}
+
+
+void appendMenuW(
+  HMENU    hMenu,
+  UINT     uFlags,
+  UINT_PTR uIDNewItem,
+  LPCWSTR  lpNewItem)
+{
+  CALL_BOOL_WINAPI(AppendMenuW, hMenu, uFlags, uIDNewItem, lpNewItem);
+}
+
+
 // EOF

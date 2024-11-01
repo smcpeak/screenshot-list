@@ -289,4 +289,18 @@ RECT getWindowClientArea(HWND hwnd);
 int getWindowClientHeight(HWND hwnd);
 
 
+// Like `CreateMenu`, but handles errors.
+HMENU createMenu();
+
+// Like `SetMenu`, but handles errors.
+void setMenu(HWND hwnd, HMENU menu);
+
+// Like `AppendMenuW`, but handles errors.
+void appendMenuW(
+  HMENU    hMenu,
+  UINT     uFlags,
+  UINT_PTR uIDNewItem,
+  LPCWSTR  lpNewItem);
+
+
 #endif // WINAPI_UTIL_H

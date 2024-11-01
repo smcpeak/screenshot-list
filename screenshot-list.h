@@ -102,6 +102,13 @@ public:      // methods
   // Handle `WM_KEYDOWN`.  Return true if handled.
   bool onKeyDown(WPARAM wParam, LPARAM lParam);
 
+  // ------------------------------ Menu -------------------------------
+  // Create the application menu bar and associate it with the window.
+  void createAppMenu();
+
+  // Handle menu command `menuId`.
+  void onCommand(int menuId);
+
   // ----------------------- Messages generally ------------------------
   // BaseWindow methods.
   virtual LRESULT handleMessage(

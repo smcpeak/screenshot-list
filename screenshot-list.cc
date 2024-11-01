@@ -446,6 +446,39 @@ bool SLMainWindow::onKeyDown(WPARAM wParam, LPARAM lParam)
 }
 
 
+// ------------------------------- Menu --------------------------------
+// Menu IDs.
+enum {
+  IDM_QUIT = 1,
+};
+
+
+void SLMainWindow::createAppMenu()
+{
+  HMENU menuBar = createMenu();
+
+  {
+    HMENU menu = createMenu();
+
+    appendMenuW(menu, MF_STRING, IDM_QUIT, L"&Quit");
+
+    appendMenuW(menuBar, MF_POPUP, (UINT_PTR)menu, L"&File");
+  }
+
+  setMenu(m_hwnd, menuBar);
+}
+
+
+void SLMainWindow::onCommand(int menuId)
+{
+  switch (menuId) {
+    case IDM_QUIT:
+      PostMessage(m_hwnd, WM_CLOSE, 0, 0);
+      break;
+  }
+}
+
+
 // ------------------------ Messages generally -------------------------
 LRESULT CALLBACK SLMainWindow::handleMessage(
   UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -459,6 +492,7 @@ LRESULT CALLBACK SLMainWindow::handleMessage(
         SendMessage(m_hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
       }
 
+      createAppMenu();
       registerHotkeys();
       setVScrollInfo();
 
@@ -497,6 +531,10 @@ LRESULT CALLBACK SLMainWindow::handleMessage(
       // window, so I need all of it repainted.
       invalidateAllPixels();
       setVScrollInfo();
+      return 0;
+
+    case WM_COMMAND:
+      onCommand(LOWORD(wParam));
       return 0;
   }
 

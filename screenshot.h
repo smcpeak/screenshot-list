@@ -35,7 +35,11 @@ public:
   // Draw the bitmap to `hdc` at the specified coordinates.  This
   // preserves the source image aspect ratio, drawing window background
   // color bars on the sides as needed to fill the space.
-  void drawToDC(HDC hdc, int x, int y, int w, int h);
+  void drawToDC(HDC hdc, int x, int y, int w, int h) const;
+
+  // Like `drawToDC`, but calculate the height for the given width, and
+  // return that height.
+  int drawToDC_autoHeight(HDC hdc, int x, int y, int w) const;
 
   // If we want to draw the screenshot within a column of width 'w'
   // pixels, return the corresponding pixel height that will allow the

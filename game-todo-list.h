@@ -24,6 +24,9 @@ public:      // data
   // Width of the screenshot list in pixels.
   int m_listWidth;
 
+  // Index of the selected list item, or -1 for none.
+  int m_selectedIndex;
+
 public:      // methods
   GTLMainWindow();
   ~GTLMainWindow();

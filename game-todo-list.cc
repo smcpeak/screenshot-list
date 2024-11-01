@@ -58,13 +58,18 @@ static int const hotkeyVKs[] = {
 // display of the selected screenshot.
 static int const c_dividerWidth = 3;
 
-// Pixel size of the margin between the list contents and its area edge.
-static int const c_listMargin = 2;
+// Pixel size of the margin between the list contents and its area edge,
+// and between different list elements.
+static int const c_listMargin = 5;
+
+// Margin of the larger selected-shot area.
+static int const c_largeShotMargin = 5;
 
 
 GTLMainWindow::GTLMainWindow()
   : m_screenshots(),
-    m_listWidth(400)
+    m_listWidth(400),
+    m_selectedIndex(0)
 {}
 
 
@@ -132,14 +137,31 @@ void GTLMainWindow::onPaint()
 
     // Draw the screenshots.
     if (!m_screenshots.empty()) {
-      for (auto const &screenshot : m_screenshots) {
-        y += textOut(hdc, x, y, screenshot->m_timestamp).cy;
-
+      {
+        // Width of the list content area.
         int innerWidth = m_listWidth - c_listMargin*2;
-        int h = screenshot->heightForWidth(innerWidth);
-        screenshot->drawToDC(hdc, x, y, innerWidth, h);
-        y += h;
+
+        for (auto const &screenshot : m_screenshots) {
+          y += screenshot->drawToDC_autoHeight(hdc, x, y, innerWidth);
+          y += c_listMargin;
+        }
       }
+
+      // Reset the cursor for use in the main area.
+      x = c_largeShotMargin;
+      y = c_largeShotMargin;
+
+      // Width of main area.
+      int w = rcClient.right - m_listWidth
+                             - c_dividerWidth
+                             - c_largeShotMargin*2;
+
+      // Draw timestamp of selected screenshot.
+      Screenshot const *sel = m_screenshots.at(m_selectedIndex).get();
+      y += textOut(hdc, x, y, sel->m_timestamp).cy;
+
+      // Draw a larger version of the selected screenshot.
+      sel->drawToDC_autoHeight(hdc, x, y, w);
     }
 
     else {
@@ -271,7 +293,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   cw.m_lpWindowName = L"Game To-Do List";
   cw.m_x       = 200;
   cw.m_y       = 200;
-  cw.m_nWidth  = 800;
+  cw.m_nWidth  = 1200;
   cw.m_nHeight = 800;
   cw.m_dwStyle = WS_OVERLAPPEDWINDOW;
   mainWindow.createWindow(cw);

@@ -85,7 +85,7 @@ Screenshot::~Screenshot()
 }
 
 
-void Screenshot::drawToDC(HDC hdc, int x, int y, int w, int h)
+void Screenshot::drawToDC(HDC hdc, int x, int y, int w, int h) const
 {
   // Ignore zero-size draw requests.  This also avoids dividing by zero
   // when computing the aspect ratio if `h` is zero.
@@ -161,6 +161,14 @@ void Screenshot::drawToDC(HDC hdc, int x, int y, int w, int h)
       memDC.m_hdc, 0, 0, m_width, m_height,      // src, x, y, w, h
       SRCCOPY);                                  // rop
   }
+}
+
+
+int Screenshot::drawToDC_autoHeight(HDC hdc, int x, int y, int w) const
+{
+  int h = heightForWidth(w);
+  drawToDC(hdc, x, y, w, h);
+  return h;
 }
 
 

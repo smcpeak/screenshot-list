@@ -295,4 +295,19 @@ HBITMAP createCompatibleBitmap(HDC hdc, int w, int h)
 }
 
 
+RECT getWindowClientArea(HWND hwnd)
+{
+  RECT rcClient;
+  CALL_BOOL_WINAPI(GetClientRect, hwnd, &rcClient);
+  return rcClient;
+}
+
+
+int getWindowClientHeight(HWND hwnd)
+{
+  RECT r = getWindowClientArea(hwnd);
+  return r.bottom - r.top;
+}
+
+
 // EOF

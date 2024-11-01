@@ -10,6 +10,7 @@
 
 #include <windows.h>                   // Windows API
 
+#include <algorithm>                   // std::clamp
 #include <cassert>                     // assert
 #include <cstdlib>                     // std::{atoi, getenv, max}
 #include <cstring>                     // std::wstrlen
@@ -70,11 +71,16 @@ static int const c_listHighlightFrameThickness = 4;
 // Margin of the larger selected-shot area.
 static int const c_largeShotMargin = 5;
 
+// Number of pixels to vertically scroll the content when the scroll bar
+// up/down buttons are clicked.
+static int const c_vscrollLineAmount = 20;
+
 
 GTLMainWindow::GTLMainWindow()
   : m_screenshots(),
     m_listWidth(400),
-    m_selectedIndex(-1)
+    m_selectedIndex(-1),
+    m_listScroll(0)
 {}
 
 
@@ -86,6 +92,7 @@ void GTLMainWindow::captureScreen()
 {
   m_screenshots.push_front(std::make_unique<Screenshot>());
   selectItem(0);
+  setVScrollInfo();
   invalidateAllPixels();
 }
 
@@ -125,6 +132,8 @@ void GTLMainWindow::selectItem(int newIndex)
 
   if (newIndex != m_selectedIndex) {
     m_selectedIndex = newIndex;
+    scrollToSelectedIndex();
+    setVScrollInfo();
     invalidateAllPixels();
   }
 }
@@ -136,6 +145,147 @@ void GTLMainWindow::boundSelectedIndex()
 }
 
 
+// ----------------------------- Scrolling -----------------------------
+int GTLMainWindow::getListContentHeight() const
+{
+  int y, h;
+  getItemVerticalBounds(-1 /*chosenIndex*/, y /*OUT*/, h /*OUT*/);
+  return y;
+}
+
+
+void GTLMainWindow::getItemVerticalBounds(
+  int chosenIndex,
+  int &y,          // OUT
+  int &h) const    // OUT
+{
+  y = 0;
+  h = 0;
+
+  int currentIndex = 0;
+  for (auto const &shot : m_screenshots) {
+    int shotHeight = shot->heightForWidth(m_listWidth - c_listMargin*2);
+
+    if (currentIndex == chosenIndex) {
+      // We'll say this item's height includes both the top and bottom
+      // margins, even though those overlap with adjacent elements.
+      h = shotHeight + c_listMargin*2;
+      return;
+    }
+
+    y += c_listMargin + shotHeight;
+    ++currentIndex;
+  }
+
+  // If we get here then `chosenIndex` is invalid.  Treat that as a
+  // request for the "bounds" of an item beyond the end.
+  y += c_listMargin;
+}
+
+
+void GTLMainWindow::scrollToSelectedIndex()
+{
+  if (m_selectedIndex >= 0) {
+    // Get the pixel bounds of the selected item.
+    int y, h;
+    getItemVerticalBounds(m_selectedIndex, y, h);
+
+    // Is the bottom of the selected item below the bottom of the
+    // window?
+    int windowHeight = getWindowClientHeight(m_hwnd);
+    if (y+h > m_listScroll+windowHeight) {
+      // Scroll down so we can see the bottom.
+      m_listScroll = y+h - windowHeight;
+      TRACE2("scrollToSelectedIndex: scroll down:" <<
+        " y=" << y <<
+        " h=" << h <<
+        " windowHeight=" << windowHeight <<
+        " listScroll=" << m_listScroll);
+    }
+
+    // Is the top of the item above the top of the window?
+    if (y < m_listScroll) {
+      // Scroll up so we can see the top.
+      m_listScroll = y;
+      TRACE2("scrollToSelectedIndex: scroll up:" <<
+        " y=" << y <<
+        " h=" << h <<
+        " windowHeight=" << windowHeight <<
+        " listScroll=" << m_listScroll);
+    }
+  }
+}
+
+
+void GTLMainWindow::setVScrollInfo()
+{
+  int windowHeight = getWindowClientHeight(m_hwnd);
+  int listContentHeight = getListContentHeight();
+
+  int maxScroll = std::max(0, listContentHeight - windowHeight);
+  m_listScroll = std::clamp(m_listScroll, 0, maxScroll);
+
+  SCROLLINFO si{};
+  si.cbSize = sizeof(si);
+  si.fMask = SIF_DISABLENOSCROLL | SIF_PAGE | SIF_POS | SIF_RANGE;
+  si.nMin = 0;
+
+  // Based on the docs, I should not be adding `windowHeight` here, but
+  // visually at least, the scroll bar does not behave right otherwise.
+  si.nMax = maxScroll + windowHeight;
+
+  si.nPage = windowHeight;
+  si.nPos = m_listScroll;
+  SetScrollInfo(m_hwnd, SB_VERT, &si, TRUE /*redraw*/);
+
+  TRACE2("setVScrollInfo:" <<
+    " contentHeight=" << listContentHeight <<
+    " max=" << maxScroll <<
+    " page=" << windowHeight <<
+    " pos=" << m_listScroll);
+}
+
+
+void GTLMainWindow::onVScroll(int request, int newPos)
+{
+  int windowHeight = getWindowClientHeight(m_hwnd);
+
+  switch (request) {
+    case SB_PAGEUP:
+      m_listScroll -= windowHeight;
+      break;
+
+    case SB_PAGEDOWN:
+      m_listScroll += windowHeight;
+      break;
+
+    case SB_LINEUP:
+      m_listScroll -= c_vscrollLineAmount;
+      break;
+
+    case SB_LINEDOWN:
+      m_listScroll += c_vscrollLineAmount;
+      break;
+
+    case SB_THUMBPOSITION:
+    case SB_THUMBTRACK:
+      m_listScroll = newPos;
+      break;
+
+    default:
+      // Ignore any other request.  There are things like SB_BOTTOM but
+      // I don't think they are used.  SB_ENDSCROLL gets here too.
+      return;
+  }
+
+  // This will clamp `m_listScroll`.
+  setVScrollInfo();
+
+  invalidateAllPixels();
+}
+
+
+// ------------------------------ Drawing ------------------------------
 void GTLMainWindow::drawDivider(DCX dcx) const
 {
   dcx.fillRectSysColor(COLOR_GRAYTEXT);
@@ -162,6 +312,13 @@ void GTLMainWindow::drawLargeShot(DCX dcx) const
 
 void GTLMainWindow::drawShotList(DCX dcx) const
 {
+  // Implement scrolling by moving our cursor into negative territory.
+  dcx.y = -m_listScroll;
+
+  // Pretend the height we will draw to is also taller by that amount,
+  // so exchausing `h` means we crossed the window's lower bounds.
+  dcx.h += m_listScroll;
+
   dcx.shrinkByMargin(c_listMargin);
 
   // Draw the screenshots.
@@ -169,11 +326,11 @@ void GTLMainWindow::drawShotList(DCX dcx) const
     dcx.textOut(L"No screenshots");
   }
   else {
-    int index = 0;
+    int currentIndex = 0;
     for (auto const &screenshot : m_screenshots) {
       int shotHeight = screenshot->heightForWidth(dcx.w);
 
-      if (index == m_selectedIndex) {
+      if (currentIndex == m_selectedIndex) {
         // Compute the highlight rectangle by expanding what we will
         // draw as the screenshot.
         DCX dcxHighlight(dcx);
@@ -188,7 +345,7 @@ void GTLMainWindow::drawShotList(DCX dcx) const
       screenshot->drawToDCX_autoHeight(dcx);
 
       dcx.moveTopBy(shotHeight + c_listMargin);
-      ++index;
+      ++currentIndex;
 
       if (dcx.h <= 0) {
         break;
@@ -204,8 +361,7 @@ void GTLMainWindow::onPaint()
   HDC hdc;
   CALL_HANDLE_WINAPI(hdc, BeginPaint, m_hwnd, &ps);
 
-  RECT rcClient;
-  CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
+  RECT rcClient = getWindowClientArea(m_hwnd);
 
   // Open a scope so selected objects can be restored at scope exit.
   {
@@ -248,6 +404,7 @@ void GTLMainWindow::onPaint()
 }
 
 
+// -------------------------- Keyboard input ---------------------------
 void GTLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
 {
   TRACE2(L"hotkey:"
@@ -266,6 +423,7 @@ void GTLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
       if (!m_screenshots.empty() && m_selectedIndex >= 0) {
         m_screenshots.erase(m_screenshots.cbegin() + m_selectedIndex);
         boundSelectedIndex();
+        setVScrollInfo();
         invalidateAllPixels();
       }
       break;
@@ -299,6 +457,7 @@ bool GTLMainWindow::onKeyDown(WPARAM wParam, LPARAM lParam)
 }
 
 
+// ------------------------ Messages generally -------------------------
 LRESULT CALLBACK GTLMainWindow::handleMessage(
   UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -312,6 +471,7 @@ LRESULT CALLBACK GTLMainWindow::handleMessage(
       }
 
       registerHotkeys();
+      setVScrollInfo();
 
       return 0;
 
@@ -338,11 +498,16 @@ LRESULT CALLBACK GTLMainWindow::handleMessage(
       }
       break;
 
+    case WM_VSCROLL:
+      onVScroll(LOWORD(wParam), HIWORD(wParam));
+      return 0;
+
     case WM_SIZE:
       // The default behavior will only repaint newly-exposed areas, but
       // I want the active screenshot to be stretched to fill the
       // window, so I need all of it repainted.
       invalidateAllPixels();
+      setVScrollInfo();
       return 0;
   }
 
@@ -350,6 +515,7 @@ LRESULT CALLBACK GTLMainWindow::handleMessage(
 }
 
 
+// ------------------------------ Startup ------------------------------
 // If `envvar` is set, return its value as an integer.  Otherwise return
 // `defaultValue`.
 static int envIntOr(char const *envvar, int defaultValue)
@@ -378,10 +544,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   CreateWindowExWArgs cw;
   cw.m_lpWindowName = L"Game To-Do List";
   cw.m_x       = 200;
-  cw.m_y       = 200;
+  cw.m_y       = 100;
   cw.m_nWidth  = 1200;
   cw.m_nHeight = 800;
-  cw.m_dwStyle = WS_OVERLAPPEDWINDOW;
+  cw.m_dwStyle = WS_OVERLAPPEDWINDOW | WS_VSCROLL;
   mainWindow.createWindow(cw);
 
   TRACE2(L"Calling ShowWindow");

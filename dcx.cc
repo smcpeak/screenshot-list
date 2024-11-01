@@ -13,8 +13,7 @@ DCX::DCX(HDC hdc, HWND hwnd)
     w(0),
     h(0)
 {
-  RECT rcClient;
-  CALL_BOOL_WINAPI(GetClientRect, hwnd, &rcClient);
+  RECT rcClient = getWindowClientArea(hwnd);
 
   this->w = rcClient.right;
   this->h = rcClient.bottom;

@@ -273,5 +273,11 @@ SIZE textOut(HDC hdc, int x, int y, std::wstring const &text);
 // Create a bitmap compatible with `hdc`, doing its own error checking.
 HBITMAP createCompatibleBitmap(HDC hdc, int w, int h);
 
+// Get the client area.  Usually (always?) the top-left is (0,0).
+RECT getWindowClientArea(HWND hwnd);
+
+// Get the window client region height in pixels.
+int getWindowClientHeight(HWND hwnd);
+
 
 #endif // WINAPI_UTIL_H

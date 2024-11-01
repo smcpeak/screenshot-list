@@ -38,6 +38,19 @@ public:      // methods
   void registerHotkeys();
   void unregisterHotkeys();
 
+  // Return the X coordinate of the list in the window.
+  int getListXCoord(DCX const &dcxWindow) const;
+
+  // Draw the divider.
+  void drawDivider(DCX const &dcxWindow) const;
+
+  // Draw the large screenshot of the slected element (if any) on the
+  // left side of the divider.
+  void drawLargeShot(DCX const &dcxWindow) const;
+
+  // Draw the list of all shots on the right side.
+  void drawShotList(DCX const &dcxWindow) const;
+
   // Handle `WM_PAINT`.
   void onPaint();
 

@@ -57,7 +57,7 @@ static int const c_vscrollLineAmount = 20;
 static bool const c_useDoubleBuffer = true;
 
 
-GTLMainWindow::GTLMainWindow()
+SLMainWindow::SLMainWindow()
   : m_screenshots(),
     m_listWidth(400),
     m_selectedIndex(-1),
@@ -65,11 +65,11 @@ GTLMainWindow::GTLMainWindow()
 {}
 
 
-GTLMainWindow::~GTLMainWindow()
+SLMainWindow::~SLMainWindow()
 {}
 
 
-void GTLMainWindow::captureScreen()
+void SLMainWindow::captureScreen()
 {
   m_screenshots.push_front(std::make_unique<Screenshot>());
   selectItem(0);
@@ -78,7 +78,7 @@ void GTLMainWindow::captureScreen()
 }
 
 
-void GTLMainWindow::registerHotkeys()
+void SLMainWindow::registerHotkeys()
 {
   for (int vk : hotkeyVKs) {
     CALL_BOOL_WINAPI(RegisterHotKey,
@@ -90,7 +90,7 @@ void GTLMainWindow::registerHotkeys()
 }
 
 
-void GTLMainWindow::unregisterHotkeys()
+void SLMainWindow::unregisterHotkeys()
 {
   for (int vk : hotkeyVKs) {
     CALL_BOOL_WINAPI(UnregisterHotKey,
@@ -100,7 +100,7 @@ void GTLMainWindow::unregisterHotkeys()
 }
 
 
-void GTLMainWindow::selectItem(int newIndex)
+void SLMainWindow::selectItem(int newIndex)
 {
   // Bound the index to the valid range.
   if (m_screenshots.empty()) {
@@ -120,14 +120,14 @@ void GTLMainWindow::selectItem(int newIndex)
 }
 
 
-void GTLMainWindow::boundSelectedIndex()
+void SLMainWindow::boundSelectedIndex()
 {
   selectItem(m_selectedIndex);
 }
 
 
 // ----------------------------- Scrolling -----------------------------
-int GTLMainWindow::getListContentHeight() const
+int SLMainWindow::getListContentHeight() const
 {
   int y, h;
   getItemVerticalBounds(-1 /*chosenIndex*/, y /*OUT*/, h /*OUT*/);
@@ -135,7 +135,7 @@ int GTLMainWindow::getListContentHeight() const
 }
 
 
-void GTLMainWindow::getItemVerticalBounds(
+void SLMainWindow::getItemVerticalBounds(
   int chosenIndex,
   int &y,          // OUT
   int &h) const    // OUT
@@ -164,7 +164,7 @@ void GTLMainWindow::getItemVerticalBounds(
 }
 
 
-void GTLMainWindow::scrollToSelectedIndex()
+void SLMainWindow::scrollToSelectedIndex()
 {
   if (m_selectedIndex >= 0) {
     // Get the pixel bounds of the selected item.
@@ -198,7 +198,7 @@ void GTLMainWindow::scrollToSelectedIndex()
 }
 
 
-void GTLMainWindow::setVScrollInfo()
+void SLMainWindow::setVScrollInfo()
 {
   int windowHeight = getWindowClientHeight(m_hwnd);
   int listContentHeight = getListContentHeight();
@@ -227,7 +227,7 @@ void GTLMainWindow::setVScrollInfo()
 }
 
 
-void GTLMainWindow::onVScroll(int request, int newPos)
+void SLMainWindow::onVScroll(int request, int newPos)
 {
   int windowHeight = getWindowClientHeight(m_hwnd);
 
@@ -267,7 +267,7 @@ void GTLMainWindow::onVScroll(int request, int newPos)
 
 
 // ------------------------------ Drawing ------------------------------
-void GTLMainWindow::drawMainWindow(DCX dcx) const
+void SLMainWindow::drawMainWindow(DCX dcx) const
 {
   // Clear the window to the background color.
   dcx.fillRectBG();
@@ -286,13 +286,13 @@ void GTLMainWindow::drawMainWindow(DCX dcx) const
 }
 
 
-void GTLMainWindow::drawDivider(DCX dcx) const
+void SLMainWindow::drawDivider(DCX dcx) const
 {
   dcx.fillRectSysColor(COLOR_GRAYTEXT);
 }
 
 
-void GTLMainWindow::drawLargeShot(DCX dcx) const
+void SLMainWindow::drawLargeShot(DCX dcx) const
 {
   dcx.shrinkByMargin(c_largeShotMargin);
 
@@ -310,7 +310,7 @@ void GTLMainWindow::drawLargeShot(DCX dcx) const
 }
 
 
-void GTLMainWindow::drawShotList(DCX dcx) const
+void SLMainWindow::drawShotList(DCX dcx) const
 {
   // Implement scrolling by moving our cursor into negative territory.
   dcx.y = -m_listScroll;
@@ -355,7 +355,7 @@ void GTLMainWindow::drawShotList(DCX dcx) const
 }
 
 
-void GTLMainWindow::onPaint()
+void SLMainWindow::onPaint()
 {
   PAINTSTRUCT ps;
   HDC hdc;
@@ -394,7 +394,7 @@ void GTLMainWindow::onPaint()
 
 
 // -------------------------- Keyboard input ---------------------------
-void GTLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
+void SLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
 {
   TRACE2(L"hotkey:"
          " id=" << id <<
@@ -428,7 +428,7 @@ void GTLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
 }
 
 
-bool GTLMainWindow::onKeyDown(WPARAM wParam, LPARAM lParam)
+bool SLMainWindow::onKeyDown(WPARAM wParam, LPARAM lParam)
 {
   TRACE2(L"onKeyDown:" << std::hex <<
          TRVAL(wParam) << TRVAL(lParam) << std::dec);
@@ -447,7 +447,7 @@ bool GTLMainWindow::onKeyDown(WPARAM wParam, LPARAM lParam)
 
 
 // ------------------------ Messages generally -------------------------
-LRESULT CALLBACK GTLMainWindow::handleMessage(
+LRESULT CALLBACK SLMainWindow::handleMessage(
   UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
   switch (uMsg) {
@@ -529,9 +529,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   g_tracingLevel = envIntOr("TRACE", 1);
 
   // Create the window.
-  GTLMainWindow mainWindow;
+  SLMainWindow mainWindow;
   CreateWindowExWArgs cw;
-  cw.m_lpWindowName = L"Game To-Do List";
+  cw.m_lpWindowName = L"Screenshot List";
   cw.m_x       = 200;
   cw.m_y       = 100;
   cw.m_nWidth  = 1200;

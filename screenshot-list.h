@@ -16,10 +16,7 @@
 
 
 // Main window of the screenshot list app.
-//
-// TODO: Rename this class.
-//
-class GTLMainWindow : public BaseWindow {
+class SLMainWindow : public BaseWindow {
 public:      // data
   // Sequence of screenshots, most recent first.
   std::deque<std::unique_ptr<Screenshot>> m_screenshots;
@@ -35,8 +32,8 @@ public:      // data
   int m_listScroll;
 
 public:      // methods
-  GTLMainWindow();
-  ~GTLMainWindow();
+  SLMainWindow();
+  ~SLMainWindow();
 
   // Take a screen capture and prepend it to the "to do" list.
   void captureScreen();

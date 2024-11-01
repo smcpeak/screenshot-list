@@ -230,5 +230,11 @@ public:      // methods
 // Paint a rectangle to `hdc` using the window background color.
 void fillRectBG(HDC hdc, int x, int y, int w, int h);
 
+// Fill with one of the COLOR_XXX constants.
+void fillRectSysColor(HDC hdc, int x, int y, int w, int h, int color);
+
+// Draw `text` at the given coordinate.
+void textOut(HDC hdc, int x, int y, std::wstring const &text);
+
 
 #endif // WINAPI_UTIL_H

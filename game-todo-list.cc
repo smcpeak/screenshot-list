@@ -10,7 +10,7 @@
 #include <windows.h>                   // Windows API
 
 #include <cassert>                     // assert
-#include <cstdlib>                     // std::{atoi, getenv}
+#include <cstdlib>                     // std::{atoi, getenv, max}
 #include <cstring>                     // std::wstrlen
 #include <cwchar>                      // std::wcslen
 #include <iostream>                    // std::{wcerr, flush}
@@ -54,8 +54,14 @@ static int const hotkeyVKs[] = {
 };
 
 
+// Pixel width of the divider separating the list from the larger-size
+// display of the selected screenshot.
+static int const DIVIDER_WIDTH = 3;
+
+
 GTLMainWindow::GTLMainWindow()
-  : m_screenshots()
+  : m_screenshots(),
+    m_listWidth(400)
 {}
 
 
@@ -105,28 +111,33 @@ void GTLMainWindow::onPaint()
     HFONT hFont = (HFONT)GetStockObject(SYSTEM_FONT);
     SELECT_RESTORE_OBJECT(hdc, hFont);
 
+    RECT rcClient;
+    CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
+
+    // Left edge of the screenshot list.
+    int x = std::max(rcClient.right - m_listWidth, 0L);
+
+    // Draw the divider.
+    fillRectSysColor(hdc,
+      x - DIVIDER_WIDTH, 0,
+      DIVIDER_WIDTH, rcClient.bottom,
+      COLOR_GRAYTEXT);
+
+    // Draw the screenshots.
     if (!m_screenshots.empty()) {
-      Screenshot *screenshot = m_screenshots.front().get();
+      int y = 0;
+      for (auto const &screenshot : m_screenshots) {
+        textOut(hdc, x, y, screenshot->m_timestamp);
+        y += 15;
 
-      CALL_BOOL_WINAPI(TextOut,
-        hdc,
-        0, 0,
-        screenshot->m_timestamp.c_str(),
-        screenshot->m_timestamp.size());
-
-      RECT rcClient;
-      CALL_BOOL_WINAPI(GetClientRect, m_hwnd, &rcClient);
-
-      int const y = 20;
-      screenshot->drawToDC(hdc,
-        0, y,
-        rcClient.right,
-        rcClient.bottom - y);
+        int h = screenshot->heightForWidth(m_listWidth);
+        screenshot->drawToDC(hdc, x, y, m_listWidth, h);
+        y += h;
+      }
     }
 
     else {
-      wchar_t const *msg = L"No screenshot";
-      CALL_BOOL_WINAPI(TextOut, hdc, 10, 10, msg, std::wcslen(msg));
+      textOut(hdc, x, 0, L"No screenshots");
     }
   }
 
@@ -251,11 +262,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   // Create the window.
   GTLMainWindow mainWindow;
   CreateWindowExWArgs cw;
-  cw.m_lpWindowName = L"Game TODO List";
+  cw.m_lpWindowName = L"Game To-Do List";
   cw.m_x       = 200;
   cw.m_y       = 200;
-  cw.m_nWidth  = 400;
-  cw.m_nHeight = 400;
+  cw.m_nWidth  = 800;
+  cw.m_nHeight = 800;
   cw.m_dwStyle = WS_OVERLAPPEDWINDOW;
   mainWindow.createWindow(cw);
 

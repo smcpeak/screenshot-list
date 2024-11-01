@@ -5,6 +5,7 @@
 
 #include "winapi-util.h"               // CompatibleDC, etc.
 
+#include <cmath>                       // std::ceil
 #include <cwchar>                      // std::swprintf
 #include <string>                      // std::wstring
 
@@ -159,6 +160,17 @@ void Screenshot::drawToDC(HDC hdc, int x, int y, int w, int h)
       hdc, x, y, w, h,                           // dest, x, y, w, h
       memDC.m_hdc, 0, 0, m_width, m_height,      // src, x, y, w, h
       SRCCOPY);                                  // rop
+  }
+}
+
+
+int Screenshot::heightForWidth(int w) const
+{
+  if (m_width > 0) {
+    return (int)std::ceil((float)m_height * (float)w / (float)m_width);
+  }
+  else {
+    return 0;
   }
 }
 

@@ -36,6 +36,11 @@ public:
   // preserves the source image aspect ratio, drawing window background
   // color bars on the sides as needed to fill the space.
   void drawToDC(HDC hdc, int x, int y, int w, int h);
+
+  // If we want to draw the screenshot within a column of width 'w'
+  // pixels, return the corresponding pixel height that will allow the
+  // image to be shown with its proper aspect ratio.
+  int heightForWidth(int w) const;
 };
 
 

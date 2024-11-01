@@ -224,12 +224,32 @@ HGDIOBJ GDIObjectDeleter::release()
 // ----------------------------- GDI utils -----------------------------
 void fillRectBG(HDC hdc, int x, int y, int w, int h)
 {
+  fillRectSysColor(hdc, x, y, w, h, COLOR_WINDOW);
+}
+
+
+void fillRectSysColor(HDC hdc, int x, int y, int w, int h, int color)
+{
+  HBRUSH brush;
+  CALL_HANDLE_WINAPI(brush, GetSysColorBrush, color);
+
   RECT r;
   r.left = x;
   r.top = y;
   r.right = x+w;
   r.bottom = y+h;
-  FillRect(hdc, &r, (HBRUSH) (COLOR_WINDOW+1));
+
+  FillRect(hdc, &r, brush);
+}
+
+
+void textOut(HDC hdc, int x, int y, std::wstring const &text)
+{
+  CALL_BOOL_WINAPI(TextOut,
+    hdc,
+    x, y,
+    text.data(),
+    text.size());
 }
 
 

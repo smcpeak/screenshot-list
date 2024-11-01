@@ -21,6 +21,9 @@ public:      // data
   // Sequence of screenshots, most recent first.
   std::deque<std::unique_ptr<Screenshot>> m_screenshots;
 
+  // Width of the screenshot list in pixels.
+  int m_listWidth;
+
 public:      // methods
   GTLMainWindow();
   ~GTLMainWindow();

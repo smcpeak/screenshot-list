@@ -58,10 +58,19 @@ void winapiDie(wchar_t const *functionName);
 
 
 // Call `function`, which returns a `BOOL` indicating success, with the
-// specified arguments.  Die if it fails.
+// specified arguments.  Die if it fails, printing `GetLastError()`.
 #define CALL_BOOL_WINAPI(function, ...)  \
   if (!function(__VA_ARGS__)) {          \
     winapiDie(WIDE_STRINGIZE(function)); \
+  }
+
+
+// Call `function`, which returns a `BOOL` indicating success, with the
+// specified arguments.  Die if it fails, printing no reason because the
+// API does not provide one.
+#define CALL_BOOL_WINAPI_NLE(function, ...) \
+  if (!function(__VA_ARGS__)) {             \
+    winapiDieNLE(WIDE_STRINGIZE(function)); \
   }
 
 

@@ -154,9 +154,7 @@ SelectRestoreObject::SelectRestoreObject(HDC hdc, HGDIOBJ newObj)
 {
   m_prevObj = SelectObject(m_hdc, newObj);
   if (!m_prevObj) {
-    // The docs do not say that `GetLastError` can be used in this
-    // case...
-    winapiDie(L"SelectObject(set)");
+    winapiDieNLE(L"SelectObject(set)");
   }
 }
 
@@ -165,7 +163,7 @@ SelectRestoreObject::~SelectRestoreObject()
 {
   // Restore the old object.
   if (!SelectObject(m_hdc, m_prevObj)) {
-    winapiDie(L"SelectObject(restore)");
+    winapiDieNLE(L"SelectObject(restore)");
   }
 }
 
@@ -210,7 +208,7 @@ BitmapDC::BitmapDC(HDC hdc, int w, int h)
 BitmapDC::~BitmapDC()
 {
   if (m_bitmap) {
-    CALL_BOOL_WINAPI(DeleteObject, m_bitmap);
+    CALL_BOOL_WINAPI_NLE(DeleteObject, m_bitmap);
   }
 }
 

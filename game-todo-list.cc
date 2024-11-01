@@ -51,6 +51,7 @@ int g_tracingLevel = 1;
 static int const hotkeyVKs[] = {
   VK_F5,
   VK_UP,
+  VK_DOWN,
   VK_DELETE,
 };
 
@@ -63,6 +64,9 @@ static int const c_dividerWidth = 3;
 // and between different list elements.
 static int const c_listMargin = 5;
 
+// Thickness in pixels of the item highlight frame.
+static int const c_listHighlightFrameThickness = 4;
+
 // Margin of the larger selected-shot area.
 static int const c_largeShotMargin = 5;
 
@@ -70,7 +74,7 @@ static int const c_largeShotMargin = 5;
 GTLMainWindow::GTLMainWindow()
   : m_screenshots(),
     m_listWidth(400),
-    m_selectedIndex(0)
+    m_selectedIndex(-1)
 {}
 
 
@@ -81,6 +85,7 @@ GTLMainWindow::~GTLMainWindow()
 void GTLMainWindow::captureScreen()
 {
   m_screenshots.push_front(std::make_unique<Screenshot>());
+  selectItem(0);
   invalidateAllPixels();
 }
 
@@ -107,6 +112,30 @@ void GTLMainWindow::unregisterHotkeys()
 }
 
 
+void GTLMainWindow::selectItem(int newIndex)
+{
+  // Bound the index to the valid range.
+  if (m_screenshots.empty()) {
+    newIndex = -1;
+  }
+  else {
+    newIndex = std::max(0, newIndex);
+    newIndex = std::min((int)m_screenshots.size() - 1, newIndex);
+  }
+
+  if (newIndex != m_selectedIndex) {
+    m_selectedIndex = newIndex;
+    invalidateAllPixels();
+  }
+}
+
+
+void GTLMainWindow::boundSelectedIndex()
+{
+  selectItem(m_selectedIndex);
+}
+
+
 void GTLMainWindow::drawDivider(DCX dcx) const
 {
   dcx.fillRectSysColor(COLOR_GRAYTEXT);
@@ -117,13 +146,13 @@ void GTLMainWindow::drawLargeShot(DCX dcx) const
 {
   dcx.shrinkByMargin(c_largeShotMargin);
 
-  if (m_screenshots.empty()) {
-    dcx.textOut(L"No screenshots");
+  if (m_screenshots.empty() || m_selectedIndex < 0) {
+    dcx.textOut(L"No screenshot selected");
   }
   else {
     // Draw timestamp of selected screenshot.
     Screenshot const *sel = m_screenshots.at(m_selectedIndex).get();
-    dcx.textOut_incY(sel->m_timestamp);
+    dcx.textOut_moveTop(sel->m_timestamp);
 
     // Draw a larger version of the selected screenshot.
     sel->drawToDCX_autoHeight(dcx);
@@ -140,9 +169,32 @@ void GTLMainWindow::drawShotList(DCX dcx) const
     dcx.textOut(L"No screenshots");
   }
   else {
+    int index = 0;
     for (auto const &screenshot : m_screenshots) {
-      dcx.y += screenshot->drawToDCX_autoHeight(dcx);
-      dcx.y += c_listMargin;
+      int shotHeight = screenshot->heightForWidth(dcx.w);
+
+      if (index == m_selectedIndex) {
+        // Compute the highlight rectangle by expanding what we will
+        // draw as the screenshot.
+        DCX dcxHighlight(dcx);
+        dcxHighlight.h = shotHeight;
+        dcxHighlight.shrinkByMargin(-c_listHighlightFrameThickness);
+
+        // Draw it first so the shot covers most of the highlight
+        // rectangle, leaving just a rectangular frame.  (Like
+        // elsewhere, this causes flickering due to clumsily drawing
+        // pixels more than once, and ideally should be fixed.)
+        dcxHighlight.fillRectSysColor(COLOR_HIGHLIGHT);
+      }
+
+      screenshot->drawToDCX_autoHeight(dcx);
+
+      dcx.moveTopBy(shotHeight + c_listMargin);
+      ++index;
+
+      if (dcx.h <= 0) {
+        break;
+      }
     }
   }
 }
@@ -189,17 +241,28 @@ void GTLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
          " fsModifiers=" << fsModifiers <<
          " vk=" << vk);
 
-  if (id == VK_F5) {
-    // Take a new screenshot.
-    captureScreen();
-  }
+  switch (id) {
+    case VK_F5:
+      // Take a new screenshot.
+      captureScreen();
+      break;
 
-  if (id == VK_DELETE) {
-    // Discard the top-most screenshot.
-    if (!m_screenshots.empty()) {
-      m_screenshots.pop_front();
-      invalidateAllPixels();
-    }
+    case VK_DELETE:
+      // Discard the selected screenshot.
+      if (!m_screenshots.empty() && m_selectedIndex >= 0) {
+        m_screenshots.erase(m_screenshots.cbegin() + m_selectedIndex);
+        boundSelectedIndex();
+        invalidateAllPixels();
+      }
+      break;
+
+    case VK_UP:
+      selectItem(m_selectedIndex-1);
+      break;
+
+    case VK_DOWN:
+      selectItem(m_selectedIndex+1);
+      break;
   }
 }
 

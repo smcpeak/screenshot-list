@@ -38,6 +38,14 @@ public:      // methods
   void registerHotkeys();
   void unregisterHotkeys();
 
+  // Select the item at `newIndex`.  If it is out of range, the index is
+  // set to the appropriate endpoint, or -1 if there are no list
+  // elements.  Then the window is redrawn if the selection has changed.
+  void selectItem(int newIndex);
+
+  // If `m_selectedIndex` is out of bounds, correct that.
+  void boundSelectedIndex();
+
   // Draw the divider.
   void drawDivider(DCX dcx) const;
 

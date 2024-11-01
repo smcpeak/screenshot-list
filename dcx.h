@@ -76,8 +76,9 @@ public:      // methods
   // Draw `text` at (x,y) and return the size of the drawn text.
   SIZE textOut(std::wstring const &text) const;
 
-  // Draw `text` and increment `m_y` by the text height.
-  void textOut_incY(std::wstring const &text);
+  // Draw `text`, and move the top by text height (increasing `y` and
+  // decreasing `h`).
+  void textOut_moveTop(std::wstring const &text);
 
   // Given N widths, return a DCX that splits `*this` into N+1 columns,
   // where the leftmost column's width is whatever is left over after
@@ -87,8 +88,12 @@ public:      // methods
   std::vector<DCX> splitHorizontallyFromRight(
     std::vector<int> const &widths) const;
 
-  // Reduce the area by `margin` pixels on all four sides.
+  // Reduce the area by `margin` pixels on all four sides.  The margin
+  // can be negative to expand the area instead.
   void shrinkByMargin(int margin);
+
+  // Add `dy` to `y` and reduce `h` by the same amount.
+  void moveTopBy(int dy);
 };
 
 

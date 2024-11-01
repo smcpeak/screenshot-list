@@ -39,9 +39,9 @@ SIZE DCX::textOut(std::wstring const &text) const
 }
 
 
-void DCX::textOut_incY(std::wstring const &text)
+void DCX::textOut_moveTop(std::wstring const &text)
 {
-  this->y += this->textOut(text).cy;
+  moveTopBy(this->textOut(text).cy);
 }
 
 
@@ -87,5 +87,13 @@ void DCX::shrinkByMargin(int margin)
   w -= margin*2;
   h -= margin*2;
 }
+
+
+void DCX::moveTopBy(int dy)
+{
+  y += dy;
+  h -= dy;
+}
+
 
 // EOF

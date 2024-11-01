@@ -38,6 +38,7 @@ OBJS += dcx.o
 OBJS += game-todo-list.o
 OBJS += resources.o
 OBJS += screenshot.o
+OBJS += trace.o
 OBJS += winapi-util.o
 
 

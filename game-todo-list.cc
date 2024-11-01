@@ -6,6 +6,7 @@
 #include "game-todo-list.h"            // this module
 
 #include "dcx.h"                       // DCX
+#include "trace.h"                     // TRACE2, etc.
 #include "winapi-util.h"               // WIDE_STRINGIZE, SELECT_RESTORE_OBJECT, GET_AND_RELEASE_HDC
 
 #include <windows.h>                   // Windows API
@@ -18,33 +19,6 @@
 #include <iostream>                    // std::{wcerr, flush}
 #include <memory>                      // std::make_unique
 #include <sstream>                     // std::wostringstream
-
-
-// Level of diagnostics to print.
-//
-//   1: API call failures.
-//
-//   2: Information about messages, etc., of low volume.
-//
-//   3: Higher-volume messages, e.g., relating to mouse movement.
-//
-// The default value is not used, as `wWinMain` overwrites it.
-//
-int g_tracingLevel = 1;
-
-
-// Write a diagnostic message.
-#define TRACE(level, msg)           \
-  if (g_tracingLevel >= (level)) {  \
-    std::wcerr << msg << std::endl; \
-  }
-
-#define TRACE1(msg) TRACE(1, msg)
-#define TRACE2(msg) TRACE(2, msg)
-#define TRACE3(msg) TRACE(3, msg)
-
-// Add the value of `expr` to a chain of outputs using `<<`.
-#define TRVAL(expr) L" " WIDE_STRINGIZE(expr) L"=" << (expr)
 
 
 // Virtual key codes to register as hotkeys.  These are used as the IDs

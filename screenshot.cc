@@ -88,8 +88,9 @@ void Screenshot::drawToDC(HDC hdc, int x, int y, int w, int h) const
   // as its data source.
   SELECT_RESTORE_OBJECT(memDC.m_hdc, m_bitmap);
 
-  // The MS docs claim this is the "best" stretch mode.
-  SetStretchBltMode(memDC.m_hdc, HALFTONE);
+  // Change the awful default B+W stretching mode to something that
+  // works properly with color images.
+  SetStretchBltMode(hdc, HALFTONE);
 
   // Aspect ratio of the source image.
   float srcAR = (float)m_width / (float)m_height;

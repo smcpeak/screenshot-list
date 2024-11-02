@@ -31,6 +31,14 @@ public:      // data
   // pixel of the list.
   int m_listScroll;
 
+  // If true, the hotkeys have been registered.
+  bool m_hotkeysRegistered;
+
+  // The menu bar of the main window.  It is conceptually owned by this
+  // object, but because it is assigned as the window's menu, the window
+  // destroys it automatically on shutdown.
+  HMENU m_menuBar;
+
 public:      // methods
   SLMainWindow();
   ~SLMainWindow();
@@ -100,7 +108,7 @@ public:      // methods
   void onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk);
 
   // Handle `WM_KEYDOWN`.  Return true if handled.
-  bool onKeyDown(WPARAM wParam, LPARAM lParam);
+  bool onKeyPress(int vk);
 
   // ------------------------------ Menu -------------------------------
   // Create the application menu bar and associate it with the window.
@@ -108,6 +116,10 @@ public:      // methods
 
   // Handle menu command `menuId`.
   void onCommand(int menuId);
+
+  // Set the checkmark state of the `IDM_REGISTER_HOTKEYS` menu item
+  // based on the current value of `m_hotkeysRegistered`.
+  void setRegisterHotkeysMenuItemCheckbox();
 
   // ----------------------- Messages generally ------------------------
   // BaseWindow methods.

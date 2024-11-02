@@ -61,7 +61,9 @@ SLMainWindow::SLMainWindow()
   : m_screenshots(),
     m_listWidth(400),
     m_selectedIndex(-1),
-    m_listScroll(0)
+    m_listScroll(0),
+    m_hotkeysRegistered(false),
+    m_menuBar(nullptr)
 {}
 
 
@@ -80,22 +82,34 @@ void SLMainWindow::captureScreen()
 
 void SLMainWindow::registerHotkeys()
 {
-  for (int vk : hotkeyVKs) {
-    CALL_BOOL_WINAPI(RegisterHotKey,
-      m_hwnd,
-      vk,                  // id
-      0,                   // fsModifiers
-      vk);                 // vk
+  if (!m_hotkeysRegistered) {
+    for (int vk : hotkeyVKs) {
+      CALL_BOOL_WINAPI(RegisterHotKey,
+        m_hwnd,
+        vk,                  // id
+        0,                   // fsModifiers
+        vk);                 // vk
+    }
+
+    TRACE2("registered hotkeys");
+    m_hotkeysRegistered = true;
+    setRegisterHotkeysMenuItemCheckbox();
   }
 }
 
 
 void SLMainWindow::unregisterHotkeys()
 {
-  for (int vk : hotkeyVKs) {
-    CALL_BOOL_WINAPI(UnregisterHotKey,
-      m_hwnd,
-      vk);
+  if (m_hotkeysRegistered) {
+    for (int vk : hotkeyVKs) {
+      CALL_BOOL_WINAPI(UnregisterHotKey,
+        m_hwnd,
+        vk);
+    }
+
+    TRACE2("unregistered hotkeys");
+    m_hotkeysRegistered = false;
+    setRegisterHotkeysMenuItemCheckbox();
   }
 }
 
@@ -401,7 +415,23 @@ void SLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
          " fsModifiers=" << fsModifiers <<
          " vk=" << vk);
 
-  switch (id) {
+  // Treat hotkeys the same as regular keypresses.  This way we can
+  // still handle them when the hotkeys are not registered.
+  onKeyPress(vk);
+}
+
+
+bool SLMainWindow::onKeyPress(int vk)
+{
+  TRACE2(L"onKeyPress:" << vk);
+
+  switch (vk) {
+    case 'Q':
+      // Q to quit.
+      TRACE2(L"Saw Q keypress.");
+      PostMessage(m_hwnd, WM_CLOSE, 0, 0);
+      return true;
+
     case VK_F5:
       // Take a new screenshot.
       captureScreen();
@@ -423,21 +453,6 @@ void SLMainWindow::onHotKey(WPARAM id, WPARAM fsModifiers, WPARAM vk)
 
     case VK_DOWN:
       selectItem(m_selectedIndex+1);
-      break;
-  }
-}
-
-
-bool SLMainWindow::onKeyDown(WPARAM wParam, LPARAM lParam)
-{
-  TRACE2(L"onKeyDown:" << std::hex <<
-         TRVAL(wParam) << TRVAL(lParam) << std::dec);
-
-  switch (wParam) {
-    case 'Q':
-      // Q to quit.
-      TRACE2(L"Saw Q keypress.");
-      PostMessage(m_hwnd, WM_CLOSE, 0, 0);
       return true;
   }
 
@@ -450,39 +465,62 @@ bool SLMainWindow::onKeyDown(WPARAM wParam, LPARAM lParam)
 // Menu IDs.
 enum {
   IDM_QUIT = 1,
+  IDM_REGISTER_HOTKEYS,
   IDM_ABOUT,
 };
 
 
 void SLMainWindow::createAppMenu()
 {
-  HMENU menuBar = createMenu();
+  m_menuBar = createMenu();
 
+  // File
   {
     HMENU menu = createMenu();
 
     appendMenuW(menu, MF_STRING, IDM_QUIT, L"&Quit");
 
-    appendMenuW(menuBar, MF_POPUP, (UINT_PTR)menu, L"&File");
+    appendMenuW(m_menuBar, MF_POPUP, (UINT_PTR)menu, L"&File");
   }
 
+  // Options
+  {
+    HMENU menu = createMenu();
+
+    appendMenuW(menu, MF_STRING, IDM_REGISTER_HOTKEYS, L"Register &hotkeys");
+
+    appendMenuW(m_menuBar, MF_POPUP, (UINT_PTR)menu, L"&Options");
+  }
+
+  // Help
   {
     HMENU menu = createMenu();
 
     appendMenuW(menu, MF_STRING, IDM_ABOUT, L"&About...");
 
-    appendMenuW(menuBar, MF_POPUP, (UINT_PTR)menu, L"&Help");
+    appendMenuW(m_menuBar, MF_POPUP, (UINT_PTR)menu, L"&Help");
   }
 
-  setMenu(m_hwnd, menuBar);
+  setMenu(m_hwnd, m_menuBar);
 }
 
 
 void SLMainWindow::onCommand(int menuId)
 {
+  TRACE2(L"onCommand: " << menuId);
+
   switch (menuId) {
     case IDM_QUIT:
       PostMessage(m_hwnd, WM_CLOSE, 0, 0);
+      break;
+
+    case IDM_REGISTER_HOTKEYS:
+      if (m_hotkeysRegistered) {
+        unregisterHotkeys();
+      }
+      else {
+        registerHotkeys();
+      }
       break;
 
     case IDM_ABOUT:
@@ -497,6 +535,14 @@ void SLMainWindow::onCommand(int menuId)
         MB_OK);
       break;
   }
+}
+
+
+void SLMainWindow::setRegisterHotkeysMenuItemCheckbox()
+{
+  // This doesn't have a useful error return.
+  CheckMenuItem(m_menuBar, IDM_REGISTER_HOTKEYS,
+    MF_BYCOMMAND | (m_hotkeysRegistered? MF_CHECKED : MF_UNCHECKED));
 }
 
 
@@ -536,7 +582,7 @@ LRESULT CALLBACK SLMainWindow::handleMessage(
       return 0;
 
     case WM_KEYDOWN:
-      if (onKeyDown(wParam, lParam)) {
+      if (onKeyPress(wParam)) {
         // Handled.
         return 0;
       }

@@ -5,6 +5,7 @@
 
 #include "winapi-util.h"               // CompatibleDC, etc.
 
+#include <cassert>                     // assert
 #include <cmath>                       // std::ceil
 #include <cwchar>                      // std::swprintf
 #include <string>                      // std::wstring
@@ -57,6 +58,9 @@ Screenshot::Screenshot()
 
   // Take ownership of the bitmap.
   m_bitmap = memDC.releaseBitmap();
+
+  // Temporary: just write to a fixed file name.
+  writeToBMPFile(L"shot.bmp");
 }
 
 
@@ -170,6 +174,98 @@ int Screenshot::heightForWidth(int w) const
   else {
     return 0;
   }
+}
+
+
+// Based in part on
+// https://learn.microsoft.com/en-us/windows/win32/gdi/capturing-an-image
+void Screenshot::writeToBMPFile(std::wstring const &fname) const
+{
+  assert(m_bitmap);
+
+  // Get image dimensions, etc.
+  BITMAP bmp{};
+  CALL_BOOL_WINAPI_NLE(GetObject, m_bitmap, sizeof(bmp), &bmp);
+
+  // Prepare the second part of the header.
+  BITMAPINFOHEADER biHeader{};
+  biHeader.biSize = sizeof(biHeader);
+  biHeader.biWidth = bmp.bmWidth;
+  biHeader.biHeight = bmp.bmHeight;
+  biHeader.biPlanes = 1;
+  biHeader.biBitCount = 32;
+  biHeader.biCompression = BI_RGB;
+  biHeader.biSizeImage = 0;
+  biHeader.biXPelsPerMeter = 0;
+  biHeader.biYPelsPerMeter = 0;
+  biHeader.biClrUsed = 0;
+  biHeader.biClrImportant = 0;
+
+  // Total size in bytes of the pixel data.
+  std::size_t pixelDataSizeBytes =
+    ((bmp.bmWidth * biHeader.biBitCount + 31) / 32) * 4 * bmp.bmHeight;
+
+  // Allocate memory to store it.
+  std::vector<char> pixelData(pixelDataSizeBytes, 0);
+
+  // Extract the image data from the GDI object.
+  {
+    // The GDI object was originally created using the screen as a
+    // source, so we need another screen DC to decode it.
+    GET_AND_RELEASE_HDC(hdcScreen, NULL);
+
+    // The documentation nonsensically says this function can "return"
+    // `ERROR_INVALID_PARAMETER`.  How?  It does not say it sets
+    // `GetLastError()`, and in my experience, if the function does not
+    // say it sets GLE then it does not.  And anyway there is evidently
+    // only one possible error code it can "return", which means it
+    // conveys no information.  So I treat this function as not being
+    // able to return any error information.
+    CALL_BOOL_WINAPI_NLE(GetDIBits,
+      hdcScreen,             // hdc: DC with which the GDI object is compatible.
+      m_bitmap,              // hbm: Input GDI object.
+      0,                     // start: First scan (sic) line.
+      (UINT)bmp.bmHeight,    // cLines: Number of lines.
+      pixelData.data(),      // lpvBits: Array to write to.
+      (BITMAPINFO*)&biHeader,// lpbmi: Desired output format.
+      DIB_RGB_COLORS);       // usage: Whether to use a palette (here, no).
+  }
+
+  // Prepare the first part of the header.
+  BITMAPFILEHEADER bmfHeader{};
+  bmfHeader.bfType = 0x4D42;           // "BM", in little-endian.
+  bmfHeader.bfSize =                   // Total file size in bytes.
+    sizeof(bmfHeader) +                  // header 1
+    sizeof(biHeader) +                   // header 2
+    pixelDataSizeBytes;                  // pixel data
+  bmfHeader.bfReserved1 = 0;
+  bmfHeader.bfReserved2 = 0;
+  bmfHeader.bfOffBits =                // Offset to pixel data.
+    sizeof(bmfHeader) +                  // header 1
+    sizeof(biHeader);                    // header 2
+
+  // Create the file.
+  HANDLE hFile;
+  CALL_HANDLE_WINAPI(hFile, CreateFileW,
+    fname.c_str(),                     // lpFileName
+    GENERIC_WRITE,                     // dwDesiredAccess
+    0,                                 // dwShareMode
+    NULL,                              // lpSecurityAttributes
+    CREATE_ALWAYS,                     // dwCreationDisposition
+    FILE_ATTRIBUTE_NORMAL,             // dwFlagsAndAttributes
+    NULL);                             // hTemplateFile
+  HandleCloser hFile_closer(hFile);
+
+  // Write the image data.
+  DWORD dwBytesWritten = 0;            // ignored
+  CALL_BOOL_WINAPI(WriteFile, hFile,
+    &bmfHeader, sizeof(bmfHeader), &dwBytesWritten, NULL);
+  CALL_BOOL_WINAPI(WriteFile, hFile,
+    &biHeader, sizeof(biHeader), &dwBytesWritten, NULL);
+  CALL_BOOL_WINAPI(WriteFile, hFile,
+    pixelData.data(), pixelData.size(), &dwBytesWritten, NULL);
+
+  hFile_closer.close();
 }
 
 

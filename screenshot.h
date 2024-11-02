@@ -17,7 +17,8 @@ class Screenshot {
   NO_OBJECT_COPIES(Screenshot);
 
 public:      // data
-  // The screenshot bitmap.
+  // The screenshot bitmap, as a GDI object compatible with the DC
+  // obtained from `GetDC(null)` (representing the screen).
   HBITMAP m_bitmap;
 
   // Size of that bitmap in pixels.
@@ -49,6 +50,9 @@ public:
   // pixels, return the corresponding pixel height that will allow the
   // image to be shown with its proper aspect ratio.
   int heightForWidth(int w) const;
+
+  // Write the image to a file in BMP format.
+  void writeToBMPFile(std::wstring const &fname) const;
 };
 
 

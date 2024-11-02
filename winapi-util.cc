@@ -9,7 +9,8 @@
 
 #include <codecvt>                     // std::wstring_convert
 #include <cstdlib>                     // std::exit
-#include <iostream>                    // std::wcerr
+#include <exception>                   // std::exception
+#include <iostream>                    // std::{wcerr, clog, endl}
 #include <locale>                      // std::wstring_convert
 #include <sstream>                     // std::wostreamstream
 #include <string>                      // std::wstring
@@ -181,6 +182,32 @@ HDCReleaser::~HDCReleaser()
 }
 
 
+// --------------------------- HandleCloser ----------------------------
+HandleCloser::HandleCloser(HANDLE handle)
+  : m_handle(handle)
+{}
+
+
+HandleCloser::~HandleCloser() noexcept
+{
+  try {
+    close();
+  }
+  catch (std::exception &e) {
+    std::clog << e.what() << std::endl;
+  }
+}
+
+
+void HandleCloser::close()
+{
+  if (m_handle) {
+    CALL_BOOL_WINAPI(CloseHandle, m_handle);
+    m_handle = nullptr;
+  }
+}
+
+
 // --------------------------- CompatibleHDC ---------------------------
 CompatibleHDC::CompatibleHDC(HDC other)
   : m_hdc(nullptr)
@@ -330,6 +357,16 @@ void appendMenuW(
   LPCWSTR  lpNewItem)
 {
   CALL_BOOL_WINAPI(AppendMenuW, hMenu, uFlags, uIDNewItem, lpNewItem);
+}
+
+
+// ------------------------------- Files -------------------------------
+void writeFile(HANDLE hFile, void const *data, std::size_t size)
+{
+  // Ignored.
+  DWORD dwBytesWritten = 0;
+
+  CALL_BOOL_WINAPI(WriteFile, hFile, data, size, &dwBytesWritten, NULL);
 }
 
 

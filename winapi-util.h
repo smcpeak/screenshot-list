@@ -97,6 +97,7 @@ void winapiDieHR(wchar_t const *functionName, HRESULT hr);
 std::wstring toWideString(std::string const &str);
 
 
+// ----------------------- CreateWindowExWArgs -------------------------
 // Structure to hold the arguments for a `CreateWindowExW` call.
 class CreateWindowExWArgs {
 public:      // data
@@ -140,6 +141,7 @@ public:      // methods
 };
 
 
+// ---------------------------- safeRelease ----------------------------
 // If `ptr` is not null, call its `Release` method and nullify it.
 template <typename T>
 void safeRelease(T *&ptr)
@@ -151,6 +153,7 @@ void safeRelease(T *&ptr)
 }
 
 
+// ------------------------ SelectRestoreObject ------------------------
 // Class that calls `SelectObject` in its ctor, then again in its dtor
 // to restore the value.
 //
@@ -179,6 +182,7 @@ public:      // methods
   SelectRestoreObject SMBASE_PP_CAT(selRestorer,__LINE__)((hdc), (hobj)) /* user ; */
 
 
+// ---------------------------- HDCReleaser ----------------------------
 // Hold a handle to a display context (HDC), releasing it with
 // `ReleaseDC` when exiting scope.
 class HDCReleaser {
@@ -206,6 +210,25 @@ public:      // methods
   HDCReleaser hdcVar##_releaser(hwnd, hdcVar);
 
 
+// --------------------------- HandleCloser ----------------------------
+// Close a given handle at scope exit.
+class HandleCloser {
+public:      // data
+  // The handle to close if not null.
+  HANDLE m_handle;
+
+public:      // methods
+  HandleCloser(HANDLE handle);
+  ~HandleCloser() noexcept;
+
+  // Close the handle and nullify `m_handle`.  This can be useful to
+  // call explicitly in order to get exceptions (whereas the dtor
+  // swallows them).
+  void close();
+};
+
+
+// --------------------------- CompatibleHDC ---------------------------
 // Create and destroy an HDC compatible with another.
 class CompatibleHDC {
 public:      // data
@@ -220,6 +243,7 @@ public:      // methods
 };
 
 
+// ----------------------------- BitmapDC ------------------------------
 // Display context and backing bitmap for use as a hidden drawing
 // surface.
 class BitmapDC {
@@ -252,6 +276,7 @@ public:      // methods
 };
 
 
+// ------------------------- GDIObjectDeleter --------------------------
 // Delete a GDI object when going out of scope.
 class GDIObjectDeleter {
   NO_OBJECT_COPIES(GDIObjectDeleter);
@@ -270,6 +295,7 @@ public:      // methods
 };
 
 
+// -------------------------------- GDI --------------------------------
 // Paint a rectangle to `hdc` using the window background color.
 void fillRectBG(HDC hdc, int x, int y, int w, int h);
 
@@ -289,6 +315,7 @@ RECT getWindowClientArea(HWND hwnd);
 int getWindowClientHeight(HWND hwnd);
 
 
+// ------------------------------- Menus -------------------------------
 // Like `CreateMenu`, but handles errors.
 HMENU createMenu();
 
@@ -301,6 +328,12 @@ void appendMenuW(
   UINT     uFlags,
   UINT_PTR uIDNewItem,
   LPCWSTR  lpNewItem);
+
+
+// ------------------------------- Files -------------------------------
+// Like `WriteFile`, but without the useless arguments, and with error
+// checking.
+void writeFile(HANDLE hFile, void const *data, std::size_t size);
 
 
 #endif // WINAPI_UTIL_H

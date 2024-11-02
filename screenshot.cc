@@ -3,6 +3,7 @@
 
 #include "screenshot.h"                // this module
 
+#include "json.hpp"                    // json::JSON
 #include "trace.h"                     // TRACE2
 #include "winapi-util.h"               // CompatibleDC, etc.
 
@@ -52,6 +53,18 @@ Screenshot::~Screenshot()
   if (m_bitmap) {
     CALL_BOOL_WINAPI(DeleteObject, m_bitmap);
   }
+}
+
+
+void Screenshot::loadFromJSON(json::JSON const &obj)
+{
+  // TODO
+}
+
+
+json::JSON Screenshot::saveToJSON() const
+{
+  return json::JSON(toNarrowString(m_fname));
 }
 
 

@@ -7,6 +7,8 @@
 #include "screenshot-list.h"           // this module
 
 #include "dcx.h"                       // DCX
+#include "json-util.h"                 // SAVE_KEY_FIELD_CTOR
+#include "json.hpp"                    // json::JSON
 #include "trace.h"                     // TRACE2, etc.
 #include "winapi-util.h"               // WIDE_STRINGIZE, SELECT_RESTORE_OBJECT, GET_AND_RELEASE_HDC
 
@@ -14,12 +16,16 @@
 
 #include <algorithm>                   // std::clamp
 #include <cassert>                     // assert
+#include <cstdio>                      // std::{remove, rename}
 #include <cstdlib>                     // std::{atoi, getenv, max}
 #include <cstring>                     // std::wstrlen
 #include <cwchar>                      // std::wcslen
+#include <fstream>                     // std::{ifstream, ofstream}
 #include <iostream>                    // std::{wcerr, flush}
 #include <memory>                      // std::make_unique
 #include <sstream>                     // std::wostringstream
+
+using json::JSON;
 
 
 // Virtual key codes to register as hotkeys.  These are used as the IDs
@@ -114,6 +120,19 @@ void SLMainWindow::unregisterHotkeys()
 }
 
 
+void SLMainWindow::setHotkeysRegistered(bool r)
+{
+  if (r != m_hotkeysRegistered) {
+    if (r) {
+      registerHotkeys();
+    }
+    else {
+      unregisterHotkeys();
+    }
+  }
+}
+
+
 void SLMainWindow::selectItem(int newIndex)
 {
   // Bound the index to the valid range.
@@ -137,6 +156,84 @@ void SLMainWindow::selectItem(int newIndex)
 void SLMainWindow::boundSelectedIndex()
 {
   selectItem(m_selectedIndex);
+}
+
+
+// --------------------------- Serialization ---------------------------
+void SLMainWindow::loadFromJSON(json::JSON const &obj)
+{
+  LOAD_KEY_FIELD(listWidth, data.ToInt());
+  LOAD_KEY_FIELD(selectedIndex, data.ToInt());
+  LOAD_KEY_FIELD(listScroll, data.ToInt());
+
+  if (obj.hasKey("hotkeysRequired")) {
+    setHotkeysRegistered(obj.at("hotkeysRegistered").ToBool());
+  }
+}
+
+
+json::JSON SLMainWindow::saveToJSON() const
+{
+  JSON obj = json::Object();
+
+  {
+    JSON shots = json::Array();
+    for (auto const &shot : m_screenshots) {
+      shots.append(shot->saveToJSON());
+    }
+    obj["screenshots"] = shots;
+  }
+
+  SAVE_KEY_FIELD_CTOR(listWidth);
+  SAVE_KEY_FIELD_CTOR(selectedIndex);
+  SAVE_KEY_FIELD_CTOR(listScroll);
+  SAVE_KEY_FIELD_CTOR(hotkeysRegistered);
+
+  return obj;
+}
+
+
+std::string SLMainWindow::loadFromFile(std::string const &fname)
+{
+  std::ifstream in(fname, std::ios::binary);
+  if (!in) {
+    return std::strerror(errno);
+  }
+
+  std::ostringstream oss;
+  oss << in.rdbuf();
+
+  // This merely reports errors to stderr...
+  JSON obj = JSON::Load(oss.str());
+
+  loadFromJSON(obj);
+
+  return "";
+}
+
+
+std::string SLMainWindow::saveToFile(std::string const &fname) const
+{
+  JSON obj = saveToJSON();
+
+  std::string serialized = obj.dump();
+
+  // Remove an existing backup.
+  std::string fnameBak = fname + ".bak";
+  std::remove(fnameBak.c_str());
+
+  // Atomically rename any existing file to the backup.
+  std::rename(fname.c_str(), fnameBak.c_str());
+
+  // Write the new file.
+  std::ofstream out(fname, std::ios::binary);
+  if (out) {
+    out << serialized << "\n";
+    return "";
+  }
+  else {
+    return std::strerror(errno);
+  }
 }
 
 
@@ -464,8 +561,14 @@ bool SLMainWindow::onKeyPress(int vk)
 // ------------------------------- Menu --------------------------------
 // Menu IDs.
 enum {
-  IDM_QUIT = 1,
+  // File
+  IDM_SAVE = 1,
+  IDM_QUIT,
+
+  // Options
   IDM_REGISTER_HOTKEYS,
+
+  // Help
   IDM_ABOUT,
 };
 
@@ -478,6 +581,7 @@ void SLMainWindow::createAppMenu()
   {
     HMENU menu = createMenu();
 
+    appendMenuW(menu, MF_STRING, IDM_SAVE, L"&Save to shots/list.json");
     appendMenuW(menu, MF_STRING, IDM_QUIT, L"&Quit");
 
     appendMenuW(m_menuBar, MF_POPUP, (UINT_PTR)menu, L"&File");
@@ -505,22 +609,37 @@ void SLMainWindow::createAppMenu()
 }
 
 
+void SLMainWindow::fileSave()
+{
+  createDirectoryIfNeeded(L"shots");
+  std::string error = saveToFile("shots/list.json");
+  if (!error.empty()) {
+    MessageBox(m_hwnd,
+      toWideString(error).c_str(),
+      L"Error saving shots/list.json",
+      MB_OK);
+  }
+  else {
+    TRACE2(L"wrote shots/list.json");
+  }
+}
+
+
 void SLMainWindow::onCommand(int menuId)
 {
   TRACE2(L"onCommand: " << menuId);
 
   switch (menuId) {
+    case IDM_SAVE:
+      fileSave();
+      break;
+
     case IDM_QUIT:
       PostMessage(m_hwnd, WM_CLOSE, 0, 0);
       break;
 
     case IDM_REGISTER_HOTKEYS:
-      if (m_hotkeysRegistered) {
-        unregisterHotkeys();
-      }
-      else {
-        registerHotkeys();
-      }
+      setHotkeysRegistered(!m_hotkeysRegistered);
       break;
 
     case IDM_ABOUT:

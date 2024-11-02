@@ -5,6 +5,7 @@
 #define SCREENSHOT_H
 
 #include "dcx.h"                       // DCX
+#include "json-fwd.h"                  // json::JSON
 #include "winapi-util.h"               // NO_OBJECT_COPIES
 
 #include <string>                      // std::wstring
@@ -36,6 +37,10 @@ public:
   Screenshot();
 
   ~Screenshot();
+
+  // De/serialize as JSON.
+  void loadFromJSON(json::JSON const &obj);
+  json::JSON saveToJSON() const;
 
   // Draw the bitmap to `hdc` at the specified coordinates.  This
   // preserves the source image aspect ratio, drawing window background

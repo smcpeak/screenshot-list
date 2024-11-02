@@ -1,3 +1,9 @@
+json.hpp license terms:
+
+  Do what the fuck you want public license
+
+The remainder is covered by this license:
+
 The MIT License
 
 Copyright 2024 Scott McPeak

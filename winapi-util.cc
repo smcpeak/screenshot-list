@@ -115,10 +115,20 @@ void die(wchar_t const *msg)
 
 // ------------------------------ Strings ------------------------------
 // https://stackoverflow.com/questions/2573834/c-convert-string-or-char-to-wstring-or-wchar-t
+//
+// Oof, this is all deprecated in C++17 and removed in C++26!
+//
 std::wstring toWideString(std::string const &str)
 {
   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
   return converter.from_bytes(str);
+}
+
+
+std::string toNarrowString(std::wstring const &str)
+{
+  std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+  return converter.to_bytes(str);
 }
 
 

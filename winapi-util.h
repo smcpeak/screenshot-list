@@ -108,6 +108,9 @@ void die(wchar_t const *msg);
 // string.
 std::wstring toWideString(std::string const &str);
 
+// Convert wide string to UTF-8.
+std::string toNarrowString(std::wstring const &str);
+
 
 // ----------------------- CreateWindowExWArgs -------------------------
 // Structure to hold the arguments for a `CreateWindowExW` call.

@@ -430,7 +430,7 @@ class JSON
         Class Type = Class::Null;
 };
 
-JSON Array() {
+inline JSON Array() {
     return JSON::Make( JSON::Class::Array );
 }
 
@@ -441,11 +441,11 @@ JSON Array( T... args ) {
     return arr;
 }
 
-JSON Object() {
+inline JSON Object() {
     return JSON::Make( JSON::Class::Object );
 }
 
-std::ostream& operator<<( std::ostream &os, const JSON &json ) {
+inline std::ostream& operator<<( std::ostream &os, const JSON &json ) {
     os << json.dump();
     return os;
 }
@@ -653,7 +653,7 @@ namespace {
     }
 }
 
-JSON JSON::Load( const string &str ) {
+inline JSON JSON::Load( const string &str ) {
     size_t offset = 0;
     return parse_next( str, offset );
 }

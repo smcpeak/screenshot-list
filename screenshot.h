@@ -25,8 +25,11 @@ public:      // data
   int m_width;
   int m_height;
 
-  // Timestamp when the shot was taken, in "YYYY-MM-DD hh:mm" format.
-  std::wstring m_timestamp;
+  // Name of the file to which the image has been saved.  The name
+  // format is "YYYY-MM-DDThh-mm-ssU.bmp" format, where 'T' is literal,
+  // and 'U' is a suffix string appended to make the name unique when
+  // needed.
+  std::wstring m_fname;
 
 public:
   // Capture the current screen contents.
@@ -50,6 +53,9 @@ public:
   // pixels, return the corresponding pixel height that will allow the
   // image to be shown with its proper aspect ratio.
   int heightForWidth(int w) const;
+
+  // Choose a unique value for `m_fname`.
+  void chooseFileName();
 
   // Write the image to a file in BMP format.
   void writeToBMPFile(std::wstring const &fname) const;

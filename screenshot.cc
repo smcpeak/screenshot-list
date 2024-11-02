@@ -3,6 +3,7 @@
 
 #include "screenshot.h"                // this module
 
+#include "trace.h"                     // TRACE2
 #include "winapi-util.h"               // CompatibleDC, etc.
 
 #include <cassert>                     // assert
@@ -13,35 +14,11 @@
 #include <windows.h>                   // GetLocalTime, etc.
 
 
-// Return the current date/time, in the local time zone, in
-// "YYYY-MM-DD hh:mm:ss" format.
-static std::wstring getLocaltime()
-{
-  SYSTEMTIME st;
-  GetLocalTime(&st);
-
-  // 20 would be enough for 4-digit years, but years do not technically
-  // have an upper bound (although the Windows API limits them to ~30k).
-  wchar_t buf[30];
-
-  swprintf(buf, sizeof(buf) / sizeof(buf[0]),
-    L"%04d-%02d-%02d %02d:%02d:%02d",
-    (int)st.wYear,
-    (int)st.wMonth,
-    (int)st.wDay,
-    (int)st.wHour,
-    (int)st.wMinute,
-    (int)st.wSecond);
-
-  return std::wstring(buf);
-}
-
-
 Screenshot::Screenshot()
   : m_bitmap(nullptr),
     m_width(GetSystemMetrics(SM_CXSCREEN)),
     m_height(GetSystemMetrics(SM_CYSCREEN)),
-    m_timestamp(getLocaltime())
+    m_fname()
 {
   GET_AND_RELEASE_HDC(hdcScreen, NULL);
 
@@ -59,8 +36,14 @@ Screenshot::Screenshot()
   // Take ownership of the bitmap.
   m_bitmap = memDC.releaseBitmap();
 
-  // Temporary: just write to a fixed file name.
-  writeToBMPFile(L"shot.bmp");
+  // Chose an unused file name.
+  chooseFileName();
+
+  // Create any directories needed for the name.
+  createParentDirectoriesOf(m_fname);
+
+  // Save the image to the chosen name.
+  writeToBMPFile(m_fname);
 }
 
 
@@ -175,6 +158,47 @@ int Screenshot::heightForWidth(int w) const
     return 0;
   }
 }
+
+
+void Screenshot::chooseFileName()
+{
+  // Choose the name based on the current time.
+  SYSTEMTIME st;
+  GetLocalTime(&st);
+
+  // Disambiguation loop.
+  for (int suffixNumber = 1; suffixNumber < 100; ++suffixNumber) {
+    // Normally there is no suffix.
+    wchar_t suffix[10] = L"";
+
+    // But add "s2", "s3", etc. when needed.  The "s" stands for "shot".
+    if (suffixNumber > 1) {
+      swprintf(suffix, TABLESIZE(suffix), L"s%02d", suffixNumber);
+      TRACE2(L"suffix: " << suffix);
+    }
+
+    wchar_t buf[80];
+
+    swprintf(buf, TABLESIZE(buf),
+      L"shots/%04d-%02d-%02dT%02d-%02d-%02d%ls.bmp",
+      (int)st.wYear,
+      (int)st.wMonth,
+      (int)st.wDay,
+      (int)st.wHour,
+      (int)st.wMinute,
+      (int)st.wSecond,
+      suffix);
+    TRACE2(L"buf: " << buf);
+
+    if (!pathExists(buf)) {
+      m_fname = std::wstring(buf);
+      return;
+    }
+  }
+
+  die(L"Screenshot::chooseFileName: failed to pick a unique file name");
+}
+
 
 
 // Based in part on

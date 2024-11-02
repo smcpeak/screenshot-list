@@ -11,6 +11,7 @@
 #include <string>                      // std::{string, wstring}
 
 
+// ------------------------------ Macros -------------------------------
 // Concatenate tokens.  Unlike plain '##', this works for __LINE__.  It
 // is the same as BOOST_PP_CAT.
 #define SMBASE_PP_CAT(a,b) SMBASE_PP_CAT2(a,b)
@@ -25,11 +26,16 @@
     void operator=(name&) /*user ;*/
 
 
+// Number of entries in an array.
+#define TABLESIZE(tbl) (sizeof(tbl)/sizeof((tbl)[0]))
+
+
 // Stringize an argument as a wide string.
 #define WIDE_STRINGIZE_HELPER(x) L ## x
 #define WIDE_STRINGIZE(x) WIDE_STRINGIZE_HELPER(#x)
 
 
+// -------------------------- Error handling ---------------------------
 // Get the string corresponding to `errorCode`.  This string is a
 // complete sentence, and does *not* end with a newline.
 std::wstring getErrorMessage(DWORD errorCode);
@@ -92,6 +98,12 @@ void winapiDieHR(wchar_t const *functionName, HRESULT hr);
   }
 
 
+// Generically die with the given message, which should not end with a
+// new line.
+void die(wchar_t const *msg);
+
+
+// ------------------------------ Strings ------------------------------
 // Convert from narrow string, assumed to use UTF-8 encoding, to wide
 // string.
 std::wstring toWideString(std::string const &str);
@@ -334,6 +346,27 @@ void appendMenuW(
 // Like `WriteFile`, but without the useless arguments, and with error
 // checking.
 void writeFile(HANDLE hFile, void const *data, std::size_t size);
+
+// Like `GetFileAttributesW`, but returns `INVALID_FILE_ATTRIBUTES`
+// only for the case of "file not found", aborting with an error for all
+// true error cases.
+DWORD getFileAttributes(std::wstring const &fname);
+
+// True if `fname` exists on disk.  Returns true even if it is the name
+// of a directory or other special file.
+bool pathExists(std::wstring const &fname);
+
+// True if `fname` names an existing directory.
+bool directoryExists(std::wstring const &fname);
+
+// If `fname` does not name an existing directory, attempt to create it.
+// If this returns successfully then `fname` names an existing
+// directory.
+void createDirectoryIfNeeded(std::wstring const &fname);
+
+// Create all needed parent directories so we can then create `fname`
+// itself.
+void createParentDirectoriesOf(std::wstring const &fname);
 
 
 #endif // WINAPI_UTIL_H

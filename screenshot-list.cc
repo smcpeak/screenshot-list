@@ -302,7 +302,7 @@ void SLMainWindow::drawLargeShot(DCX dcx) const
   else {
     // Draw timestamp of selected screenshot.
     Screenshot const *sel = m_screenshots.at(m_selectedIndex).get();
-    dcx.textOut_moveTop(sel->m_timestamp);
+    dcx.textOut_moveTop(sel->m_fname);
 
     // Draw a larger version of the selected screenshot.
     sel->drawToDCX_autoHeight(dcx);

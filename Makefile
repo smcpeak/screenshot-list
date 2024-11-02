@@ -1,6 +1,6 @@
 # screenshot-list/Makefile
 
-all: screenshot-list.exe
+all:
 
 
 CXX := g++
@@ -47,9 +47,14 @@ OBJS += winapi-util.o
 %.o: %.cc
 	$(CXX) -c -o $@ $(CXXFLAGS) $<
 
+all: winapi-util-test.exe
+winapi-util-test.exe: trace.o winapi-util.o winapi-util-test.o
+	$(CXX) -o $@ $(LDFLAGS) $^ $(LIBS)
+
 resources.o: screenshot-list.rc doc/icon.ico
 	windres -o $@ $<
 
+all: screenshot-list.exe
 screenshot-list.exe: $(OBJS)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJS) $(LIBS)
 

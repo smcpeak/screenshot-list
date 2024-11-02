@@ -16,6 +16,7 @@
 #include <string>                      // std::wstring
 
 
+// -------------------------- Error handling ---------------------------
 // This is copied+modified from smbase/syserr.cc.
 std::wstring getErrorMessage(DWORD errorCode)
 {
@@ -105,6 +106,14 @@ void winapiDieHR(wchar_t const *functionName, HRESULT hr)
 }
 
 
+void die(wchar_t const *msg)
+{
+  std::wcerr << msg << L"\n";
+  std::exit(2);
+}
+
+
+// ------------------------------ Strings ------------------------------
 // https://stackoverflow.com/questions/2573834/c-convert-string-or-char-to-wstring-or-wchar-t
 std::wstring toWideString(std::string const &str)
 {
@@ -367,6 +376,61 @@ void writeFile(HANDLE hFile, void const *data, std::size_t size)
   DWORD dwBytesWritten = 0;
 
   CALL_BOOL_WINAPI(WriteFile, hFile, data, size, &dwBytesWritten, NULL);
+}
+
+
+DWORD getFileAttributes(std::wstring const &fname)
+{
+  DWORD attr = GetFileAttributesW(fname.c_str());
+  if (attr == INVALID_FILE_ATTRIBUTES) {
+    DWORD code = GetLastError();
+    if (code == ERROR_FILE_NOT_FOUND ||
+        code == ERROR_PATH_NOT_FOUND) {
+      // Fine.
+    }
+    else {
+      // Some other error code means a true error (e.g, permissions).
+      winapiDie(L"GetFileAttributesW");
+    }
+  }
+
+  return attr;
+}
+
+
+bool pathExists(std::wstring const &fname)
+{
+  DWORD attr = getFileAttributes(fname);
+  return attr != INVALID_FILE_ATTRIBUTES;
+}
+
+
+bool directoryExists(std::wstring const &fname)
+{
+  DWORD attr = getFileAttributes(fname);
+  return attr != INVALID_FILE_ATTRIBUTES &&
+         (attr & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
+
+void createDirectoryIfNeeded(std::wstring const &fname)
+{
+  if (!directoryExists(fname)) {
+    CALL_BOOL_WINAPI(CreateDirectory, fname.c_str(), NULL);
+  }
+}
+
+
+void createParentDirectoriesOf(std::wstring const &fname)
+{
+  wchar_t const *start = fname.c_str();
+  for (wchar_t const *p = start; *p != 0; ++p) {
+    if (p > start && (*p == L'/' || *p == L'\\')) {
+      // Get the path to this element.
+      std::wstring path = fname.substr(0, p - start);
+      createDirectoryIfNeeded(path);
+    }
+  }
 }
 
 

@@ -3,5 +3,5 @@
 *.exe
 *.ii
 *.o
-gamepad-viewer.json
 rel
+shots

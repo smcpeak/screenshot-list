@@ -62,6 +62,9 @@ static int const c_vscrollLineAmount = 20;
 //
 static bool const c_useDoubleBuffer = true;
 
+// Name of the file to load and save.
+static wchar_t const *c_saveFileName = L"shots/list.json";
+
 
 SLMainWindow::SLMainWindow()
   : m_screenshots(),
@@ -79,7 +82,10 @@ SLMainWindow::~SLMainWindow()
 
 void SLMainWindow::captureScreen()
 {
-  m_screenshots.push_front(std::make_unique<Screenshot>());
+  std::unique_ptr<Screenshot> shot = std::make_unique<Screenshot>();
+  shot->captureScreen();
+
+  m_screenshots.push_front(std::move(shot));
   selectItem(0);
   setVScrollInfo();
   invalidateAllPixels();
@@ -184,8 +190,18 @@ void SLMainWindow::loadFromJSON(json::JSON const &obj)
   }
 
   LOAD_KEY_FIELD(listWidth, data.ToInt());
+
   LOAD_KEY_FIELD(selectedIndex, data.ToInt());
+
+  // The selected index might become invalid due to some images not
+  // being able to load.
+  boundSelectedIndex();
+
   LOAD_KEY_FIELD(listScroll, data.ToInt());
+
+  // Update the scrollbar and also ensure the scroll amount is within
+  // range.
+  setVScrollInfo();
 
   if (obj.hasKey("hotkeysRegistered")) {
     setHotkeysRegistered(obj.at("hotkeysRegistered").ToBool());
@@ -634,7 +650,7 @@ void SLMainWindow::createAppMenu()
 
 void SLMainWindow::fileLoad()
 {
-  std::string error = loadFromFile("shots/list.json");
+  std::string error = loadFromFile(toNarrowString(c_saveFileName));
   if (!error.empty()) {
     MessageBox(m_hwnd,
       toWideString(error).c_str(),
@@ -651,7 +667,7 @@ void SLMainWindow::fileLoad()
 void SLMainWindow::fileSave()
 {
   createDirectoryIfNeeded(L"shots");
-  std::string error = saveToFile("shots/list.json");
+  std::string error = saveToFile(toNarrowString(c_saveFileName));
   if (!error.empty()) {
     MessageBox(m_hwnd,
       toWideString(error).c_str(),
@@ -722,7 +738,15 @@ LRESULT CALLBACK SLMainWindow::handleMessage(
       }
 
       createAppMenu();
-      registerHotkeys();
+
+      // If the save file exists, load it when starting.
+      if (pathExists(c_saveFileName)) {
+        fileLoad();
+      }
+      else {
+        registerHotkeys();
+      }
+
       setVScrollInfo();
 
       return 0;
@@ -734,6 +758,13 @@ LRESULT CALLBACK SLMainWindow::handleMessage(
 
       PostQuitMessage(0);
       return 0;
+
+    case WM_CLOSE:
+      // Automatically save when quitting.
+      fileSave();
+
+      // Let the default handler run too so the window actually closes.
+      break;
 
     case WM_PAINT:
       onPaint();

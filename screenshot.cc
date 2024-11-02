@@ -17,11 +17,38 @@
 
 Screenshot::Screenshot()
   : m_bitmap(nullptr),
-    m_width(GetSystemMetrics(SM_CXSCREEN)),
-    m_height(GetSystemMetrics(SM_CYSCREEN)),
+    m_width(0),
+    m_height(0),
     m_fname()
+{}
+
+
+Screenshot::~Screenshot()
 {
+  clear();
+}
+
+
+void Screenshot::clear()
+{
+  if (m_bitmap) {
+    CALL_BOOL_WINAPI(DeleteObject, m_bitmap);
+    m_bitmap = nullptr;
+  }
+  m_width = 0;
+  m_height = 0;
+  m_fname.clear();
+}
+
+
+void Screenshot::captureScreen()
+{
+  clear();
+
   GET_AND_RELEASE_HDC(hdcScreen, NULL);
+
+  m_width = GetSystemMetrics(SM_CXSCREEN);
+  m_height = GetSystemMetrics(SM_CYSCREEN);
 
   // Screenshot with result going to a memory DC.
   BitmapDC memDC(hdcScreen, m_width, m_height);
@@ -45,14 +72,6 @@ Screenshot::Screenshot()
 
   // Save the image to the chosen name.
   writeToBMPFile();
-}
-
-
-Screenshot::~Screenshot()
-{
-  if (m_bitmap) {
-    CALL_BOOL_WINAPI(DeleteObject, m_bitmap);
-  }
 }
 
 
@@ -319,8 +338,8 @@ bool Screenshot::readFromBMPFile(std::wstring const &fname)
     0, 0,                    // cx, cy (take size from file)
     LR_DEFAULTCOLOR | LR_LOADFROMFILE);
   if (!hbmp) {
-    TRACE1(L"LoadImageW of " << fname << " failed: " <<
-           getLastErrorMessage());
+    // No reason is provided.
+    TRACE1(L"LoadImageW of " << fname << " failed");
     return false;
   }
 
@@ -329,9 +348,7 @@ bool Screenshot::readFromBMPFile(std::wstring const &fname)
   CALL_BOOL_WINAPI_NLE(GetObject, hbmp, sizeof(bmp), &bmp);
 
   // Discard any existing bitmap.
-  if (m_bitmap) {
-    CALL_BOOL_WINAPI(DeleteObject, m_bitmap);
-  }
+  clear();
 
   // Acquire the new details.
   m_bitmap = hbmp;

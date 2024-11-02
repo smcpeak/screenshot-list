@@ -33,10 +33,16 @@ public:      // data
   std::wstring m_fname;
 
 public:
-  // Capture the current screen contents.
+  // Initally empty.
   Screenshot();
 
   ~Screenshot();
+
+  // Empty this container.
+  void clear();
+
+  // Capture the current screen contents.
+  void captureScreen();
 
   // Deserialize from JSON.  Return false if there is a problem loading
   // the data.  (There is no indication of a failure reason.)

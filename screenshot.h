@@ -38,8 +38,11 @@ public:
 
   ~Screenshot();
 
-  // De/serialize as JSON.
-  void loadFromJSON(json::JSON const &obj);
+  // Deserialize from JSON.  Return false if there is a problem loading
+  // the data.  (There is no indication of a failure reason.)
+  bool loadFromJSON(json::JSON const &obj);
+
+  // Serialize as JSON.
   json::JSON saveToJSON() const;
 
   // Draw the bitmap to `hdc` at the specified coordinates.  This
@@ -62,8 +65,12 @@ public:
   // Choose a unique value for `m_fname`.
   void chooseFileName();
 
-  // Write the image to a file in BMP format.
-  void writeToBMPFile(std::wstring const &fname) const;
+  // Write the image to a `m_fname` in BMP format.
+  void writeToBMPFile() const;
+
+  // Read new image data from a BMP file.  Return true and set
+  // `m_fname` on success.
+  bool readFromBMPFile(std::wstring const &fname);
 };
 
 

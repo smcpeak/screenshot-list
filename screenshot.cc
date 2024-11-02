@@ -44,7 +44,7 @@ Screenshot::Screenshot()
   createParentDirectoriesOf(m_fname);
 
   // Save the image to the chosen name.
-  writeToBMPFile(m_fname);
+  writeToBMPFile();
 }
 
 
@@ -56,9 +56,17 @@ Screenshot::~Screenshot()
 }
 
 
-void Screenshot::loadFromJSON(json::JSON const &obj)
+bool Screenshot::loadFromJSON(json::JSON const &obj)
 {
-  // TODO
+  std::wstring fname = toWideString(obj.ToString());
+
+  if (readFromBMPFile(fname)) {
+    m_fname = fname;
+    return true;
+  }
+  else {
+    return false;
+  }
 }
 
 
@@ -216,7 +224,7 @@ void Screenshot::chooseFileName()
 
 // Based in part on
 // https://learn.microsoft.com/en-us/windows/win32/gdi/capturing-an-image
-void Screenshot::writeToBMPFile(std::wstring const &fname) const
+void Screenshot::writeToBMPFile() const
 {
   assert(m_bitmap);
 
@@ -225,22 +233,22 @@ void Screenshot::writeToBMPFile(std::wstring const &fname) const
   CALL_BOOL_WINAPI_NLE(GetObject, m_bitmap, sizeof(bmp), &bmp);
 
   // Prepare the second part of the header.
-  BITMAPINFOHEADER biHeader{};
-  biHeader.biSize = sizeof(biHeader);
-  biHeader.biWidth = bmp.bmWidth;
-  biHeader.biHeight = bmp.bmHeight;
-  biHeader.biPlanes = 1;
-  biHeader.biBitCount = 32;
-  biHeader.biCompression = BI_RGB;
-  biHeader.biSizeImage = 0;
-  biHeader.biXPelsPerMeter = 0;
-  biHeader.biYPelsPerMeter = 0;
-  biHeader.biClrUsed = 0;
-  biHeader.biClrImportant = 0;
+  BITMAPINFOHEADER bmiHeader{};
+  bmiHeader.biSize = sizeof(bmiHeader);
+  bmiHeader.biWidth = bmp.bmWidth;
+  bmiHeader.biHeight = bmp.bmHeight;
+  bmiHeader.biPlanes = 1;
+  bmiHeader.biBitCount = 32;
+  bmiHeader.biCompression = BI_RGB;
+  bmiHeader.biSizeImage = 0;
+  bmiHeader.biXPelsPerMeter = 0;
+  bmiHeader.biYPelsPerMeter = 0;
+  bmiHeader.biClrUsed = 0;
+  bmiHeader.biClrImportant = 0;
 
   // Total size in bytes of the pixel data.
   std::size_t pixelDataSizeBytes =
-    ((bmp.bmWidth * biHeader.biBitCount + 31) / 32) * 4 * bmp.bmHeight;
+    ((bmp.bmWidth * bmiHeader.biBitCount + 31) / 32) * 4 * bmp.bmHeight;
 
   // Allocate memory to store it.
   std::vector<char> pixelData(pixelDataSizeBytes, 0);
@@ -259,13 +267,13 @@ void Screenshot::writeToBMPFile(std::wstring const &fname) const
     // conveys no information.  So I treat this function as not being
     // able to return any error information.
     CALL_BOOL_WINAPI_NLE(GetDIBits,
-      hdcScreen,             // hdc: DC with which the GDI object is compatible.
-      m_bitmap,              // hbm: Input GDI object.
-      0,                     // start: First scan (sic) line.
-      (UINT)bmp.bmHeight,    // cLines: Number of lines.
-      pixelData.data(),      // lpvBits: Array to write to.
-      (BITMAPINFO*)&biHeader,// lpbmi: Desired output format.
-      DIB_RGB_COLORS);       // usage: Whether to use a palette (here, no).
+      hdcScreen,                       // hdc: DC with which the GDI object is compatible.
+      m_bitmap,                        // hbm: Input GDI object.
+      0,                               // start: First scan (sic) line.
+      (UINT)bmp.bmHeight,              // cLines: Number of lines.
+      pixelData.data(),                // lpvBits: Array to write to.
+      (BITMAPINFO*)&bmiHeader,         // lpbmi: Desired output format.
+      DIB_RGB_COLORS);                 // usage: Whether to use a palette (here, no).
   }
 
   // Prepare the first part of the header.
@@ -273,18 +281,18 @@ void Screenshot::writeToBMPFile(std::wstring const &fname) const
   bmfHeader.bfType = 0x4D42;           // "BM", in little-endian.
   bmfHeader.bfSize =                   // Total file size in bytes.
     sizeof(bmfHeader) +                  // header 1
-    sizeof(biHeader) +                   // header 2
+    sizeof(bmiHeader) +                  // header 2
     pixelDataSizeBytes;                  // pixel data
   bmfHeader.bfReserved1 = 0;
   bmfHeader.bfReserved2 = 0;
   bmfHeader.bfOffBits =                // Offset to pixel data.
     sizeof(bmfHeader) +                  // header 1
-    sizeof(biHeader);                    // header 2
+    sizeof(bmiHeader);                   // header 2
 
   // Create the file.
   HANDLE hFile;
   CALL_HANDLE_WINAPI(hFile, CreateFileW,
-    fname.c_str(),                     // lpFileName
+    m_fname.c_str(),                   // lpFileName
     GENERIC_WRITE,                     // dwDesiredAccess
     0,                                 // dwShareMode
     NULL,                              // lpSecurityAttributes
@@ -294,15 +302,44 @@ void Screenshot::writeToBMPFile(std::wstring const &fname) const
   HandleCloser hFile_closer(hFile);
 
   // Write the image data.
-  DWORD dwBytesWritten = 0;            // ignored
-  CALL_BOOL_WINAPI(WriteFile, hFile,
-    &bmfHeader, sizeof(bmfHeader), &dwBytesWritten, NULL);
-  CALL_BOOL_WINAPI(WriteFile, hFile,
-    &biHeader, sizeof(biHeader), &dwBytesWritten, NULL);
-  CALL_BOOL_WINAPI(WriteFile, hFile,
-    pixelData.data(), pixelData.size(), &dwBytesWritten, NULL);
+  writeFile(hFile, &bmfHeader, sizeof(bmfHeader));
+  writeFile(hFile, &bmiHeader, sizeof(bmiHeader));
+  writeFile(hFile, pixelData.data(), pixelData.size());
 
   hFile_closer.close();
+}
+
+
+bool Screenshot::readFromBMPFile(std::wstring const &fname)
+{
+  HBITMAP hbmp = (HBITMAP)LoadImageW(
+    NULL,                    // hInst
+    fname.c_str(),           // name
+    IMAGE_BITMAP,            // type
+    0, 0,                    // cx, cy (take size from file)
+    LR_DEFAULTCOLOR | LR_LOADFROMFILE);
+  if (!hbmp) {
+    TRACE1(L"LoadImageW of " << fname << " failed: " <<
+           getLastErrorMessage());
+    return false;
+  }
+
+  // Get image dimensions.
+  BITMAP bmp{};
+  CALL_BOOL_WINAPI_NLE(GetObject, hbmp, sizeof(bmp), &bmp);
+
+  // Discard any existing bitmap.
+  if (m_bitmap) {
+    CALL_BOOL_WINAPI(DeleteObject, m_bitmap);
+  }
+
+  // Acquire the new details.
+  m_bitmap = hbmp;
+  m_width = bmp.bmWidth;
+  m_height = bmp.bmHeight;
+  m_fname = fname;
+
+  return true;
 }
 
 

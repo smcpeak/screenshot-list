@@ -132,7 +132,8 @@ public:      // methods
   // Create the application menu bar and associate it with the window.
   void createAppMenu();
 
-  // File|Save menu action.
+  // Menu actions.
+  void fileLoad();
   void fileSave();
 
   // Handle menu command `menuId`.

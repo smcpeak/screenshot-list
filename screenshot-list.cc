@@ -162,11 +162,32 @@ void SLMainWindow::boundSelectedIndex()
 // --------------------------- Serialization ---------------------------
 void SLMainWindow::loadFromJSON(json::JSON const &obj)
 {
+  // Clear any existing data before loading new data.
+  m_screenshots.clear();
+  m_selectedIndex = -1;
+  m_listScroll = 0;
+
+  if (obj.hasKey("screenshots")) {
+    JSON arr = obj.at("screenshots");
+    for (int i=0; i < arr.length(); ++i) {
+      std::unique_ptr<Screenshot> shot = std::make_unique<Screenshot>();
+      if (shot->loadFromJSON(arr.at(i))) {
+        m_screenshots.push_back(std::move(shot));
+      }
+      else {
+        // Ignore (aside from tracing).  This typically corresponds to
+        // a missing screenshot file, which there isn't much we can do
+        // about.
+        TRACE2(L"failed to load: " << toWideString(arr.at(i).ToString()));
+      }
+    }
+  }
+
   LOAD_KEY_FIELD(listWidth, data.ToInt());
   LOAD_KEY_FIELD(selectedIndex, data.ToInt());
   LOAD_KEY_FIELD(listScroll, data.ToInt());
 
-  if (obj.hasKey("hotkeysRequired")) {
+  if (obj.hasKey("hotkeysRegistered")) {
     setHotkeysRegistered(obj.at("hotkeysRegistered").ToBool());
   }
 }
@@ -562,7 +583,8 @@ bool SLMainWindow::onKeyPress(int vk)
 // Menu IDs.
 enum {
   // File
-  IDM_SAVE = 1,
+  IDM_LOAD = 1,
+  IDM_SAVE,
   IDM_QUIT,
 
   // Options
@@ -581,6 +603,7 @@ void SLMainWindow::createAppMenu()
   {
     HMENU menu = createMenu();
 
+    appendMenuW(menu, MF_STRING, IDM_LOAD, L"&Load from shots/list.json");
     appendMenuW(menu, MF_STRING, IDM_SAVE, L"&Save to shots/list.json");
     appendMenuW(menu, MF_STRING, IDM_QUIT, L"&Quit");
 
@@ -609,6 +632,22 @@ void SLMainWindow::createAppMenu()
 }
 
 
+void SLMainWindow::fileLoad()
+{
+  std::string error = loadFromFile("shots/list.json");
+  if (!error.empty()) {
+    MessageBox(m_hwnd,
+      toWideString(error).c_str(),
+      L"Error loading shots/list.json",
+      MB_OK);
+  }
+  else {
+    TRACE2(L"read shots/list.json");
+    invalidateAllPixels();
+  }
+}
+
+
 void SLMainWindow::fileSave()
 {
   createDirectoryIfNeeded(L"shots");
@@ -630,6 +669,10 @@ void SLMainWindow::onCommand(int menuId)
   TRACE2(L"onCommand: " << menuId);
 
   switch (menuId) {
+    case IDM_LOAD:
+      fileLoad();
+      break;
+
     case IDM_SAVE:
       fileSave();
       break;

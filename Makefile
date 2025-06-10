@@ -15,17 +15,21 @@ CXXFLAGS += -std=c++17
 # Generate .d files.
 CXXFLAGS += -MMD
 
+# Linker flags.
 LDFLAGS :=
 LDFLAGS += -g
 LDFLAGS += -Wall
 LDFLAGS += -municode
 
-# Disable the console window.  But note that this disables tracing
-# output.
-#LDFLAGS += -mwindows
-
 # Do not require the winlibs DLLs at runtime.
 LDFLAGS += -static
+
+# Linker flags when creating a GUI.
+GUI_LDFLAGS := $(LDFLAGS)
+
+# Disable the console window.  But note that this disables tracing
+# output.
+GUI_LDFLAGS += -mwindows
 
 LIBS :=
 
@@ -56,7 +60,7 @@ resources.o: screenshot-list.rc doc/icon.ico
 
 all: screenshot-list.exe
 screenshot-list.exe: $(OBJS)
-	$(CXX) -o $@ $(LDFLAGS) $(OBJS) $(LIBS)
+	$(CXX) -o $@ $(GUI_LDFLAGS) $(OBJS) $(LIBS)
 
 
 .PHONY: clean
